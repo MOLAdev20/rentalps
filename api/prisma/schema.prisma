@@ -1,0 +1,89 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum Unit_Item_Status {
+  available
+  rented
+  maintainance
+}
+
+model Unit_Item {
+  id                   Int                     @id @default(autoincrement())
+  title                String
+  description          String                  @db.Text
+  rent_price           Float
+  status               Unit_Item_Status        @default(available)
+  created_at           DateTime                @default(now())
+  updated_at           DateTime                @updatedAt
+  
+  transactionItemUnits Transaction_Item_Unit[]
+
+  // Berikan nama asli tabel
+  @@map("unit_item")
+}
+
+model Fnb_Item {
+  id                  Int                    @id @default(autoincrement())
+  title               String
+  description         String                 @db.Text
+  price               Float
+  created_at          DateTime               @default(now())
+  updated_at          DateTime               @updatedAt
+
+  transactionItemFnbs Transaction_Item_Fnb[]
+
+  @@map("fnb_item")
+}
+
+model Transaction {
+  id            Int      @id @default(autoincrement())
+  customer_name String
+  subtotal      Float
+  total         Float
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now())
+
+  transactionItemUnits Transaction_Item_Unit[]
+  transactionItemFnbs  Transaction_Item_Fnb[]
+
+  @@map("transaction")
+}
+
+model Transaction_Item_Unit {
+  id             Int      @id @default(autoincrement())
+  transaction_id Int // relasi ke tabel transaksi `Transaction`
+  unit_item_id   Int // relasi ke tabel unit_item `Unit_Item`
+  play_time      Float
+  sub_total      Float
+  start_time     DateTime @default(now())
+  end_time       DateTime
+
+  transaction Transaction @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
+  unit_item   Unit_Item   @relation(fields: [unit_item_id], references: [id], onDelete: Cascade)
+
+  @@map("transaction_item_unit")
+}
+
+model Transaction_Item_Fnb {
+  id             Int   @id @default(autoincrement())
+  transaction_id Int // relasi ke tabel `Transaction`
+  fnb_item_id    Int // relasi ke tabel `Fnb_Item`
+  quantity       Int
+  sub_total      Float
+
+  transaction Transaction @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
+  fnb_item    Fnb_Item    @relation(fields: [fnb_item_id], references: [id], onDelete: Cascade)
+
+  @@map("transaction_item_fnb")
+}

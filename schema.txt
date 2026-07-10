@@ -1,0 +1,55 @@
+Table unit_item {
+  id integer [primary key]
+  title string
+  description text
+  rent_price float
+  status string // available, rented, maintenance
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table fnb_item {
+  id integer [primary key]
+  title string
+  description text
+  price float
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table transaction {
+  id integer [primary key]
+  customer_name string // Nyimpen nama penyewa
+  status string // 'active' (lagi main), 'completed' (udah bayar)
+  subtotal float
+  discount float
+  total float
+  created_at timestamp
+  updated_at timestamp
+}
+
+// Khusus nyatet rental PS-nya (Bisa support kalau 1 nota sewa > 1 PS)
+Table transaction_rental {
+  id integer [primary key]
+  transaction_id integer
+  unit_item_id integer
+  duration_hours integer // Jumlah jam yang di-input kasir
+  price_per_hour float // Snapshot harga pas disewa
+  start_time timestamp
+  end_time timestamp
+}
+
+// Khusus nyatet FnB yang dipesen pas selesai main
+Table transaction_fnb {
+  id integer [primary key]
+  transaction_id integer
+  fnb_item_id integer
+  quantity integer // Berapa banyak makanan/minuman
+  price_snapshot float // Snapshot harga makanan pas dibeli
+}
+
+Ref: "transaction"."id" < "transaction_rental"."transaction_id"
+Ref: "unit_item"."id" < "transaction_rental"."unit_item_id"
+
+Ref: "transaction"."id" < "transaction_fnb"."transaction_id"
+Ref: "fnb_item"."id" < "transaction_fnb"."fnb_item_id"
