@@ -1,10 +1,8 @@
 <script setup lang="ts">
-type UnitStatus = "Aktif" | "Menunggu" | "Selesai" | "Terlambat";
-
 defineProps<{
   name: string;
   pricePerHour: string;
-  status: UnitStatus;
+  status: string;
 }>();
 </script>
 

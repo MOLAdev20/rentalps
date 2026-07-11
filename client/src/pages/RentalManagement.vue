@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import BaseLayout from "../components/__Layout.vue";
 import UnitCard from "../components/UnitCard.vue";
+import Axios from "axios";
 
-import { onBeforeUnmount, ref } from "vue";
+import { onMounted, ref } from "vue";
 
 document.title = "Sewa | Reno Rental";
 
-const isModalOpen = ref(false);
-const isToastVisible = ref(false);
-let toastTimer: number | undefined;
+const isModalOpen = ref<Boolean>(false);
 
 const openModal = () => {
   isModalOpen.value = true;
@@ -18,45 +17,38 @@ const closeModal = () => {
   isModalOpen.value = false;
 };
 
-const showToast = () => {
-  window.clearTimeout(toastTimer);
-  isToastVisible.value = true;
-
-  toastTimer = window.setTimeout(() => {
-    isToastVisible.value = false;
-  }, 2200);
+const formatRupiah = (angka: number): string => {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 2,
+  }).format(angka);
 };
 
-const saveItem = () => {
-  closeModal();
-  showToast();
-};
+interface Unit {
+  id: number;
+  title: string;
+  rent_price: string;
+  status: string;
+}
 
-const units = [
-  {
-    name: "PS 5 - Unit A",
-    pricePerHour: "Rp25.000 / jam",
-    status: "Aktif",
-  },
-  {
-    name: "PS 4 - Unit B",
-    pricePerHour: "Rp18.000 / jam",
-    status: "Menunggu",
-  },
-  {
-    name: "PS 5 - Unit C",
-    pricePerHour: "Rp25.000 / jam",
-    status: "Terlambat",
-  },
-  {
-    name: "PS 3 - Unit D",
-    pricePerHour: "Rp12.000 / jam",
-    status: "Selesai",
-  },
-] as const;
+const unitData = ref<Unit[]>([]);
 
-onBeforeUnmount(() => {
-  window.clearTimeout(toastTimer);
+onMounted(async () => {
+  const response = await Axios.get("http://localhost:8080/unit");
+
+  if (response.data.length == 0) {
+    console.log("Data Unit tidak ada");
+  }
+
+  response.data.unit.forEach((el: any) => {
+    unitData.value.push({
+      id: el.id,
+      title: el.title,
+      rent_price: formatRupiah(el.rent_price),
+      status: el.status,
+    });
+  });
 });
 </script>
 
@@ -232,10 +224,10 @@ onBeforeUnmount(() => {
           class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
         >
           <UnitCard
-            v-for="unit in units"
-            :key="unit.name"
-            :name="unit.name"
-            :price-per-hour="unit.pricePerHour"
+            v-for="unit in unitData"
+            :key="unit.id"
+            :name="unit.title"
+            :price-per-hour="unit.rent_price"
             :status="unit.status"
           />
         </div>
@@ -540,7 +532,7 @@ onBeforeUnmount(() => {
             <button
               class="h-9 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white shadow-md shadow-indigo-200 transition-all hover:bg-indigo-700 active:scale-[0.97]"
               type="button"
-              @click="saveItem"
+              @click="closeModal"
             >
               Simpan
             </button>
@@ -551,11 +543,6 @@ onBeforeUnmount(() => {
 
     <div
       class="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-lg bg-gray-900 py-3 pl-4 pr-5 text-sm font-medium text-white shadow-lg transition-all duration-300"
-      :class="
-        isToastVisible
-          ? 'translate-y-0 opacity-100'
-          : 'translate-y-24 opacity-0 pointer-events-none'
-      "
     >
       <svg
         class="h-4 w-4 shrink-0 text-emerald-400"
