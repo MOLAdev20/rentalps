@@ -1,5 +1,9 @@
 <script setup lang="ts">
+import BaseLayout from '../components/__Layout.vue'
+
 import { onBeforeUnmount, ref } from 'vue'
+
+document.title = "Dashboard | Reno Rental"
 
 const isModalOpen = ref(false)
 const isToastVisible = ref(false)
@@ -30,10 +34,12 @@ const saveItem = () => {
 onBeforeUnmount(() => {
   window.clearTimeout(toastTimer)
 })
+
 </script>
 
 <template>
-  <div class="mx-auto max-w-7xl">
+  <BaseLayout>
+    <div class="mx-auto max-w-7xl">
     <div class="mb-6 flex items-center justify-between">
       <div>
         <h1 class="font-display text-2xl font-bold tracking-tight">Dasbor</h1>
@@ -290,4 +296,5 @@ onBeforeUnmount(() => {
     </svg>
     <span>Data baru berhasil ditambahkan</span>
   </div>
+  </BaseLayout>
 </template>
