@@ -1,2 +1,11 @@
 Saya sedang membuat aplikasi POS penyewaan rental Play Station (Sistem Jam, bukan harian)
-Saat ini saya bingung untuk mendesain UI card untuk setiap unit PS yang sedang di sewakan. Dengan vue JS dan tailwind CSS. Buatkan saya desain UI card ini dengan desain yang minimalist, modern dan match dengan nuansa UInya (cerah). Oh ya, unit unit ps ini nanti tempatkan di id elemen unit-container yahh...
+Saat ini saya bingung untuk mendesain UI halaman Detail Sewa Unitnya. Fungsi halaman ini tidak hanya sekedar menampilkan detail sewanya. Selain itu digunakan untuk:
+- Nambah billing/waktu main jika user ingin
+- Menambah, menghapus item atau kuantitas FnB yang dipesan
+- Menyelesaikan Transaksi jika user sudah selesai main PS nya.
+
+Saya sudah coba sedikit ide saya di file RentaiDetail.vue dan saya ingin agar tata letak UI nya seperti pada gambar yang saya kirimkan.
+Di bagian daftar FnB yang sebelumnya dipesan, ada tombol Tambah Item FnB. Jika tombol itu diklik, maka akan memunculkan sidebar dari sebelah kanan ke kiri yang menampilkan daftar item Fnb dari database. Jika item FnB itu diklik atau dipilih, maka akan muncul Item tersebut di halaman depan yang disusul sidebar tertutup (tutup buka ada efek transisinya yahh).
+Di dalam sidebar tersebut, ada pencarian untuk mencari item FnB yang hasilnya realtime
+
+Implementasikan di file RentaiDetail.vue dengan tampilan modern

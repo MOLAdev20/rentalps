@@ -1,9 +1,21 @@
 <script setup lang="ts">
+import pslogo from "/ps-logo.webp";
+
 defineProps<{
+  id: number;
   name: string;
   pricePerHour: string;
   status: string;
 }>();
+
+// trigger open modal di komponen induk (RentalManagement.vue)
+const emit = defineEmits<{
+  (e: "open-modal"): void;
+}>();
+
+const handleButtonClick = () => {
+  emit("open-modal");
+};
 </script>
 
 <template>
@@ -11,41 +23,8 @@ defineProps<{
     class="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/70"
   >
     <div class="flex items-start gap-4">
-      <div
-        class="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-indigo-50 via-white to-cyan-50 ring-1 ring-slate-200"
-      >
-        <svg
-          class="h-9 w-9 text-indigo-600"
-          viewBox="0 0 64 64"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden="true"
-        >
-          <path
-            d="M23.5 13.5H40.5C43.8137 13.5 46.5 16.1863 46.5 19.5V44.5C46.5 47.8137 43.8137 50.5 40.5 50.5H23.5C20.1863 50.5 17.5 47.8137 17.5 44.5V19.5C17.5 16.1863 20.1863 13.5 23.5 13.5Z"
-            stroke="currentColor"
-            stroke-width="3"
-          />
-          <path
-            d="M26 24.5H38"
-            stroke="currentColor"
-            stroke-width="3"
-            stroke-linecap="round"
-          />
-          <path
-            d="M26 32H38"
-            stroke="currentColor"
-            stroke-width="3"
-            stroke-linecap="round"
-          />
-          <path
-            d="M26 39.5H33"
-            stroke="currentColor"
-            stroke-width="3"
-            stroke-linecap="round"
-          />
-          <circle cx="45" cy="19" r="5" fill="currentColor" opacity="0.15" />
-        </svg>
+      <div class="h-16 w-16 shrink-0 place-items-center rounded-2xl">
+        <img :src="pslogo" width="100%" />
       </div>
 
       <div class="min-w-0 flex-1">
@@ -67,30 +46,54 @@ defineProps<{
 
         <div class="mt-4 flex gap-2">
           <button
+            v-if="status === 'available'"
             type="button"
-            class="inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3 text-sm font-medium text-white transition-all hover:bg-indigo-700 active:scale-[0.98]"
+            class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl p-3 font-medium text-white bg-indigo-600 hover:bg-indigo-800 transition-all active:scale-[0.98] cursor-pointer"
+            @click="handleButtonClick()"
           >
             <svg
-              class="h-4 w-4"
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="lucide lucide-circle-play-icon lucide-circle-play"
             >
               <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M12 6v12m6-6H6"
+                d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"
               />
+              <circle cx="12" cy="12" r="10" />
             </svg>
-            Mulai
+            <span>Mulai Sewa</span>
           </button>
-          <button
-            type="button"
-            class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+
+          <RouterLink
+            v-if="status === 'rented'"
+            class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl p-3 font-medium text-white bg-emerald-600 hover:bg-emerald-800 transition-all active:scale-[0.98] cursor-pointer"
+            :to="{ name: 'rent-detail', params: { id } }"
           >
-            Detail
-          </button>
+            <span>Disewa (-10:32)</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="lucide lucide-circle-arrow-right-icon lucide-circle-arrow-right"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="m12 16 4-4-4-4" />
+              <path d="M8 12h8" />
+            </svg>
+          </RouterLink>
         </div>
       </div>
     </div>
