@@ -158,7 +158,7 @@ defineEmits<{
         :class="collapsed ? 'lg:justify-center lg:px-0' : ''"
       >
         <img
-          src="https://api.dicebear.com/7.x/notionists/svg?seed=sabilul"
+          src=""
           class="h-8 w-8 shrink-0 rounded-full bg-white/10"
           alt="avatar"
         />
