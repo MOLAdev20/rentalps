@@ -1,8 +1,9 @@
 import { Router } from "express";
-import transactionController from "../controllers/transaction.controller.js"
+import transactionController from "../controllers/transaction.controller.js";
 
-const route = Router()
+const route = Router();
 
+route.get("/:id", transactionController.getDetail);
 route.post("/", transactionController.create);
 
-export default route
+export default route;

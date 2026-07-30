@@ -2,15 +2,36 @@
 import BaseLayout from "../components/__Layout.vue";
 import UnitCard from "../components/UnitCard.vue";
 import Axios from "axios";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 
-import { onMounted, ref } from "vue";
+import { onMounted, ref, computed } from "vue";
+
+interface FnBItem {
+  id: number;
+  name: string;
+  price: number;
+  qty: number;
+}
+
+interface PayloadFnB {
+  fnb_item: number;
+  quantity: number;
+}
+
+const fnbData = ref<FnBItem[]>([]);
+
+const fnbTotal = computed(() =>
+  fnbData.value.reduce((sum, item) => sum + item.price * item.qty, 0),
+);
 
 document.title = "Sewa | Reno Rental";
 
 const isModalOpen = ref<Boolean>(false);
 
-const openModal = () => {
+const openModal = (targetId: number) => {
   isModalOpen.value = true;
+  selectedPSUnit.value = targetId;
 };
 
 const closeModal = () => {
@@ -49,7 +70,76 @@ onMounted(async () => {
       status: el.status,
     });
   });
+
+  await getFnbData();
 });
+
+async function getFnbData() {
+  const response = await Axios.get("http://localhost:8080/fnb");
+
+  if (response.data.length == 0) {
+    console.log("Data Unit tidak ada");
+  }
+
+  response.data.fnb.forEach((el: any) => {
+    fnbData.value.push({
+      id: el.id,
+      name: el.title,
+      price: el.price,
+      qty: 0,
+    });
+  });
+}
+
+const customerName = ref<String>("");
+const selectedPSUnit = ref<Number>();
+const playTime = ref<number>(0);
+
+const increaseQty = (id: number) => {
+  const item = fnbData.value.find((f) => f.id === id);
+  if (item) item.qty++;
+};
+
+const decreaseQty = (id: number) => {
+  const item = fnbData.value.find((f) => f.id === id);
+  if (item && item.qty > 0) item.qty--;
+};
+
+function proceedTransaction() {
+  // 1. Ambil waktu sekarang dulu
+  const dateNow = new Date().toISOString();
+
+  dayjs.extend(utc);
+
+  const dateAfterAddition: string = dayjs()
+    .add(playTime.value, "hour")
+    .utc()
+    .format();
+
+  const selectedFnB: PayloadFnB[] = fnbData.value
+    .filter((item) => item.qty >= 1)
+    .map((item) => ({
+      fnb_item: item.id,
+      quantity: item.qty,
+    }));
+
+  const payload = {
+    customer_name: customerName.value,
+    transaction_rental: [
+      {
+        unit_item: selectedPSUnit.value,
+        play_time: playTime.value,
+        start_time: dateNow,
+        end_time: dateAfterAddition,
+      },
+    ],
+    transaction_fnb: selectedFnB,
+  };
+
+  const response = Axios.post("http://localhost:8080/transaction", payload);
+
+  console.log(response);
+}
 </script>
 
 <template>
@@ -64,26 +154,6 @@ onMounted(async () => {
             Buat sewa baru atau pantau unit yang sedang disewa
           </p>
         </div>
-        <button
-          type="button"
-          class="flex h-10 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white shadow-md shadow-indigo-200 transition-all hover:bg-indigo-700 active:scale-[0.97]"
-          @click="openModal"
-        >
-          <svg
-            class="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
-          Tambah Data
-        </button>
       </div>
 
       <!-- Score Card -->
@@ -226,225 +296,13 @@ onMounted(async () => {
           <UnitCard
             v-for="unit in unitData"
             :key="unit.id"
+            :id="unit.id"
             :name="unit.title"
             :price-per-hour="unit.rent_price"
             :status="unit.status"
+            @open-modal="openModal(unit.id)"
+            @open-edit-modal="openModal(unit.id)"
           />
-        </div>
-      </div>
-
-      <div class="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div
-          class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm lg:col-span-2"
-        >
-          <div class="mb-6 flex items-center justify-between">
-            <div>
-              <h3 class="font-display text-[15px] font-semibold">
-                Performa Mingguan
-              </h3>
-              <p class="mt-0.5 text-xs text-gray-500">
-                Pendapatan 7 hari terakhir
-              </p>
-            </div>
-            <select
-              class="rounded-lg border border-gray-200 bg-transparent px-2.5 py-1.5 text-xs outline-none"
-            >
-              <option>7 Hari</option>
-              <option>30 Hari</option>
-            </select>
-          </div>
-
-          <div class="flex h-44 items-end gap-3 px-1 lg:gap-5">
-            <div class="group flex flex-1 flex-col items-center gap-2">
-              <div
-                class="w-full rounded-t-md bg-indigo-100 transition-all duration-500 group-hover:bg-indigo-200"
-                style="height: 45%"
-              ></div>
-              <span class="text-[11px] text-gray-400">Sen</span>
-            </div>
-            <div class="group flex flex-1 flex-col items-center gap-2">
-              <div
-                class="w-full rounded-t-md bg-indigo-100 transition-all duration-500 group-hover:bg-indigo-200"
-                style="height: 65%"
-              ></div>
-              <span class="text-[11px] text-gray-400">Sel</span>
-            </div>
-            <div class="group flex flex-1 flex-col items-center gap-2">
-              <div
-                class="w-full rounded-t-md bg-indigo-100 transition-all duration-500 group-hover:bg-indigo-200"
-                style="height: 38%"
-              ></div>
-              <span class="text-[11px] text-gray-400">Rab</span>
-            </div>
-            <div class="group flex flex-1 flex-col items-center gap-2">
-              <div
-                class="w-full rounded-t-md bg-indigo-600 transition-all duration-500 group-hover:bg-indigo-700"
-                style="height: 88%"
-              ></div>
-              <span class="text-[11px] font-semibold text-indigo-600">Kam</span>
-            </div>
-            <div class="group flex flex-1 flex-col items-center gap-2">
-              <div
-                class="w-full rounded-t-md bg-indigo-100 transition-all duration-500 group-hover:bg-indigo-200"
-                style="height: 52%"
-              ></div>
-              <span class="text-[11px] text-gray-400">Jum</span>
-            </div>
-            <div class="group flex flex-1 flex-col items-center gap-2">
-              <div
-                class="w-full rounded-t-md bg-indigo-100 transition-all duration-500 group-hover:bg-indigo-200"
-                style="height: 70%"
-              ></div>
-              <span class="text-[11px] text-gray-400">Sab</span>
-            </div>
-            <div class="group flex flex-1 flex-col items-center gap-2">
-              <div
-                class="w-full rounded-t-md bg-indigo-100 transition-all duration-500 group-hover:bg-indigo-200"
-                style="height: 30%"
-              ></div>
-              <span class="text-[11px] text-gray-400">Min</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h3 class="mb-4 font-display text-[15px] font-semibold">
-            Aktivitas Terbaru
-          </h3>
-          <div class="space-y-4">
-            <div class="flex gap-3">
-              <span
-                class="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-50"
-              >
-                <svg
-                  class="h-4 w-4 text-emerald-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </span>
-              <div class="text-sm">
-                <p><b class="font-medium">Pesanan #2847</b> selesai diproses</p>
-                <p class="mt-0.5 text-xs text-gray-500">5 menit lalu</p>
-              </div>
-            </div>
-            <div class="flex gap-3">
-              <span
-                class="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-indigo-50"
-              >
-                <svg
-                  class="h-4 w-4 text-indigo-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M12 4.5v15m7.5-7.5h-15"
-                  />
-                </svg>
-              </span>
-              <div class="text-sm">
-                <p>
-                  <b class="font-medium">Produk baru</b> ditambahkan ke katalog
-                </p>
-                <p class="mt-0.5 text-xs text-gray-500">42 menit lalu</p>
-              </div>
-            </div>
-            <div class="flex gap-3">
-              <span
-                class="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-amber-50"
-              >
-                <svg
-                  class="h-4 w-4 text-amber-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
-                  />
-                </svg>
-              </span>
-              <div class="text-sm">
-                <p><b class="font-medium">Stok menipis</b> untuk 3 produk</p>
-                <p class="mt-0.5 text-xs text-gray-500">2 jam lalu</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div
-        class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
-      >
-        <div
-          class="flex items-center justify-between border-b border-gray-100 px-5 py-4"
-        >
-          <h3 class="font-display text-[15px] font-semibold">
-            Transaksi Terbaru
-          </h3>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead>
-              <tr
-                class="text-left text-xs uppercase tracking-wide text-gray-400"
-              >
-                <th class="px-5 py-3 font-medium">Pelanggan</th>
-                <th class="px-5 py-3 font-medium">Produk</th>
-                <th class="px-5 py-3 font-medium">Jumlah</th>
-                <th class="px-5 py-3 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-              <tr class="transition-colors hover:bg-gray-50">
-                <td class="px-5 py-3 font-medium">Rina Amelia</td>
-                <td class="px-5 py-3 text-gray-500">Serum Wajah 30ml</td>
-                <td class="px-5 py-3">Rp185.000</td>
-                <td class="px-5 py-3">
-                  <span
-                    class="rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-600"
-                    >Lunas</span
-                  >
-                </td>
-              </tr>
-              <tr class="transition-colors hover:bg-gray-50">
-                <td class="px-5 py-3 font-medium">Budi Santoso</td>
-                <td class="px-5 py-3 text-gray-500">Sepatu Lari X2</td>
-                <td class="px-5 py-3">Rp420.000</td>
-                <td class="px-5 py-3">
-                  <span
-                    class="rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-600"
-                    >Diproses</span
-                  >
-                </td>
-              </tr>
-              <tr class="transition-colors hover:bg-gray-50">
-                <td class="px-5 py-3 font-medium">Citra Dewi</td>
-                <td class="px-5 py-3 text-gray-500">Tas Ransel Kanvas</td>
-                <td class="px-5 py-3">Rp310.000</td>
-                <td class="px-5 py-3">
-                  <span
-                    class="rounded-full bg-red-50 px-2 py-1 text-xs font-medium text-red-600"
-                    >Dibatalkan</span
-                  >
-                </td>
-              </tr>
-            </tbody>
-          </table>
         </div>
       </div>
     </div>
@@ -452,12 +310,12 @@ onMounted(async () => {
     <div v-if="isModalOpen" class="fixed inset-0 z-50">
       <div class="absolute inset-0 bg-black/50" @click="closeModal" />
       <div class="relative flex min-h-screen items-center justify-center p-4">
-        <div class="relative w-full max-w-md rounded-2xl bg-white shadow-2xl">
+        <div class="relative w-full max-w-3xl rounded-2xl bg-white shadow-2xl">
           <div
             class="flex items-center justify-between border-b border-gray-100 px-5 py-4"
           >
             <h3 class="font-display text-[15px] font-semibold">
-              Tambah Data Baru
+              Buat Sewa Baru
             </h3>
             <button
               class="grid h-8 w-8 place-items-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900"
@@ -482,82 +340,139 @@ onMounted(async () => {
 
           <div class="space-y-4 px-5 py-5">
             <div>
-              <label class="mb-1.5 block text-sm font-medium">Nama Item</label>
+              <label class="mb-1.5 block text-sm font-medium"
+                >Nama Customer</label
+              >
               <input
                 type="text"
+                v-model="customerName"
                 placeholder="Contoh: Serum Wajah 30ml"
                 class="h-10 w-full rounded-lg border border-gray-200 px-3.5 text-sm outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               />
             </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="mb-1.5 block text-sm font-medium">Harga</label>
-                <input
-                  type="text"
-                  placeholder="Rp0"
-                  class="h-10 w-full rounded-lg border border-gray-200 px-3.5 text-sm outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                />
-              </div>
-              <div>
-                <label class="mb-1.5 block text-sm font-medium">Stok</label>
+            <div>
+              <label class="mb-1.5 block text-sm font-medium"
+                >Durasi Main/Sewa</label
+              >
+              <div class="flex">
                 <input
                   type="number"
-                  placeholder="0"
-                  class="h-10 w-full rounded-lg border border-gray-200 px-3.5 text-sm outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  v-model="playTime"
+                  class="h-10 w-full rounded-l-lg border border-gray-200 px-3.5 text-sm outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                 />
+                <div class="bg-gray-200 py-2 px-5 font-medium rounded-r-lg">
+                  Jam
+                </div>
               </div>
             </div>
-            <div>
-              <label class="mb-1.5 block text-sm font-medium">Kategori</label>
-              <select
-                class="h-10 w-full rounded-lg border border-gray-200 px-3.5 text-sm outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          </div>
+
+          <div class="border-t border-gray-100 px-5 py-4">
+            <div class="mb-3 flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-gray-900">
+                Pesanan Lainnya (FnB)
+              </h3>
+              <span
+                v-if="fnbTotal > 0"
+                class="text-xs font-semibold text-indigo-600"
               >
-                <option>Kecantikan</option>
-                <option>Fashion</option>
-                <option>Elektronik</option>
-              </select>
+                Subtotal: {{ formatRupiah(fnbTotal) }}
+              </span>
             </div>
+
+            <div id="fnb-id" class="max-h-52 space-y-2 overflow-y-auto pr-1">
+              <div
+                v-for="item in fnbData"
+                :key="item.id"
+                class="flex items-center justify-between rounded-xl border border-gray-200 px-3 py-2.5 transition-colors hover:bg-gray-50"
+              >
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-medium text-gray-900">
+                    {{ item.name }}
+                  </p>
+                  <p class="text-xs text-gray-500">
+                    {{ formatRupiah(item.price) }}
+                  </p>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="grid h-7 w-7 place-items-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+                    :disabled="item.qty === 0"
+                    @click="decreaseQty(item.id)"
+                  >
+                    <svg
+                      class="h-3.5 w-3.5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M20 12H4"
+                      />
+                    </svg>
+                  </button>
+
+                  <span
+                    class="w-5 text-center text-sm font-semibold text-gray-900"
+                  >
+                    {{ item.qty }}
+                  </span>
+
+                  <button
+                    type="button"
+                    class="grid h-7 w-7 place-items-center rounded-lg bg-indigo-600 text-white transition-colors hover:bg-indigo-700 active:scale-95"
+                    @click="increaseQty(item.id)"
+                  >
+                    <svg
+                      class="h-3.5 w-3.5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="flex items-center gap-2.5 border-t border-gray-100 px-5 py-4"
+          >
+            <h1 class="text-2xl">Total Bayar: <span>Rp12.000.000,00</span></h1>
           </div>
 
           <div
             class="flex items-center justify-end gap-2.5 border-t border-gray-100 px-5 py-4"
           >
             <button
-              class="h-9 rounded-lg border border-gray-200 px-4 text-sm font-medium transition-colors hover:bg-gray-50"
+              class="py-2 px-4 rounded-lg border border-gray-200 text-sm font-medium transition-colors hover:bg-gray-50 cursor-pointer"
               type="button"
               @click="closeModal"
             >
               Batal
             </button>
             <button
-              class="h-9 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white shadow-md shadow-indigo-200 transition-all hover:bg-indigo-700 active:scale-[0.97]"
+              class="py-2 px-4 rounded-lg bg-indigo-600 text-sm font-medium text-white shadow-indigo-200 transition-all hover:bg-indigo-700 active:scale-[0.97] cursor-pointer"
               type="button"
-              @click="closeModal"
+              @click="proceedTransaction"
             >
               Simpan
             </button>
           </div>
         </div>
       </div>
-    </div>
-
-    <div
-      class="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-lg bg-gray-900 py-3 pl-4 pr-5 text-sm font-medium text-white shadow-lg transition-all duration-300"
-    >
-      <svg
-        class="h-4 w-4 shrink-0 text-emerald-400"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        stroke-width="2.5"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M5 13l4 4L19 7"
-        />
-      </svg>
-      <span>Data baru berhasil ditambahkan</span>
     </div>
   </BaseLayout>
 </template>

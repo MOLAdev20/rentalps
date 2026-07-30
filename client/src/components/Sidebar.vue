@@ -29,7 +29,7 @@ defineEmits<{
       <span
         class="brand-text font-display text-[15px] font-bold text-white"
         :class="collapsed ? 'lg:hidden' : ''"
-        >Panel</span
+        >Rental PS</span
       >
     </div>
 
@@ -41,8 +41,8 @@ defineEmits<{
         Menu
       </p>
       <div class="space-y-1">
-        <a
-          href="#"
+        <RouterLink
+          to="/dashboard"
           class="flex h-10 items-center gap-3 rounded-lg bg-white/10 px-3 text-sm font-medium text-white"
           :class="collapsed ? 'lg:justify-center lg:px-0' : ''"
         >
@@ -59,8 +59,8 @@ defineEmits<{
               d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"
             />
           </svg>
-          <span :class="collapsed ? 'lg:hidden' : ''">Dasbor</span>
-        </a>
+          <span :class="collapsed ? 'lg:hidden' : ''">Dashboard</span>
+        </RouterLink>
         <a
           href="#"
           class="flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-white"

@@ -7,12 +7,6 @@ import BaseLayout from "../components/__Layout.vue";
 
 document.title = "Sewa | Reno Rental";
 
-const title = ref("PS2 Hen");
-const description = ref("PS2 Deskripsi");
-const rent_price = ref<number | null>(3000);
-
-const isModalOpen = ref(false);
-
 interface Unit {
   id: number;
   title: string;
@@ -22,7 +16,13 @@ interface Unit {
   created_at: string;
   updated_at: string;
 }
+
+const title = ref<String>();
+const description = ref<String>();
+const rent_price = ref<number>(3000);
 const unitData = ref<Unit[]>([]);
+
+const isModalOpen = ref(false);
 
 onMounted(() => {
   fetchData();
@@ -31,10 +31,11 @@ onMounted(() => {
 const fetchData = async () => {
   try {
     const response = await Axios.get("http://localhost:8080/unit");
-
     unitData.value = response.data.unit;
   } catch (err) {
-    toast.error("Data gagal dimuat. Harap coba lagi");
+    if (err.status == 500) {
+      toast.error("Data gagal dimuat. Harap coba lagi");
+    }
   }
 };
 
@@ -303,7 +304,7 @@ const getStatusClass = (status: string) =>
             <div>
               <label class="mb-1.5 block text-sm font-medium">Deskripsi</label>
               <textarea
-                class="h-10 w-full rounded-lg border border-gray-200 px-3.5 text-sm outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                class="w-full rounded-lg border border-gray-200 p-2 text-sm outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                 v-model="description"
               ></textarea>
             </div>
