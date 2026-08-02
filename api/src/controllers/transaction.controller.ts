@@ -105,10 +105,19 @@ const endpoint = {
 
   getDetail: async (req: Request, res: Response) => {
     try {
-      const transactionId: number = Number(req.params.id);
+      let id: number = Number(req.params.id);
 
-      const transactionDetail = await prisma.transaction.findUniqueOrThrow({
-        where: { id: transactionId },
+      const transactionDetail = await prisma.transaction.findFirst({
+        where: {
+          transactionItemUnits: {
+            some: {
+              unit_item_id: id,
+              unit_item: {
+                status: "rented",
+              },
+            },
+          },
+        },
         include: {
           transactionItemUnits: {
             select: {
@@ -120,6 +129,7 @@ const endpoint = {
                 select: {
                   title: true,
                   rent_price: true,
+                  status: true,
                 },
               },
             },
