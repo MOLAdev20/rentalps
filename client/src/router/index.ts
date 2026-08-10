@@ -27,6 +27,16 @@ const router = createRouter({
           name: "new-rent",
           component: NewRental,
           props: true,
+          beforeEnter: (to, _, next) => {
+            const param = to.params.unitId;
+            const toNumber = Number(param);
+
+            if (param !== undefined && (isNaN(toNumber) || toNumber <= 0)) {
+              next({ name: "NotFound" });
+            } else {
+              next();
+            }
+          },
         },
         {
           path: "detail/:id",
