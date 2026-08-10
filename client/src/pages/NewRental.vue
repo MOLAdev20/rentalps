@@ -43,7 +43,9 @@ const { alert, confirm } = useAlertDialog();
 let tick = 0;
 onMounted(async () => {
   try {
-    const data = await Axios.get(`http://localhost:8080/unit/${props.unitId}`);
+    const data = await Axios.get(
+      `http://localhost:8080/unit/available/${props.unitId}`,
+    );
 
     document.title = "Sewa Baru | Reno Rental";
 
@@ -461,6 +463,7 @@ const proceedPayment = async () => {
     </div>
 
     <FnbItemSidebar
+      v-if="unitTitle"
       v-model:sidebar-status="sidebarStatus"
       @pick-fnb-item="pickFnbItem"
     />

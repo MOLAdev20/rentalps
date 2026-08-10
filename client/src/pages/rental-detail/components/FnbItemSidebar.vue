@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import Axios from "axios";
 
 type Item = {

@@ -107,7 +107,7 @@ const endpoint = {
     try {
       let id: number = Number(req.params.id);
 
-      const transactionDetail = await prisma.transaction.findFirst({
+      const transactionDetail = await prisma.transaction.findFirstOrThrow({
         where: {
           transactionItemUnits: {
             some: {
