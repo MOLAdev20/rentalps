@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import { CirclePlay, LayoutDashboard, Monitor, Utensils } from "@lucide/vue";
+import {
+  CirclePlay,
+  LayoutDashboard,
+  Monitor,
+  ScrollText,
+  Utensils,
+} from "@lucide/vue";
 import SidebarLink from "./SidebarLink.vue";
 
 defineProps<{
@@ -56,6 +62,12 @@ defineEmits<{
               <CirclePlay :size="18" />
             </template>
             <template #title>Sewa</template>
+          </SidebarLink>
+          <SidebarLink :to="'/transaction-report'" :collapsed="collapsed">
+            <template #icon>
+              <ScrollText :size="18" />
+            </template>
+            <template #title>Laporan Transaksi</template>
           </SidebarLink>
         </div>
       </div>
