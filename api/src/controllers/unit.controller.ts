@@ -37,6 +37,22 @@ const endpoint = {
     }
   },
 
+  getAvailableOne: async (req: Request, res: Response) => {
+    try {
+      const id: number = Number(req.params.id);
+
+      const unit = await prisma.unit_Item.findUniqueOrThrow({
+        where: { id, status: "available" },
+      });
+
+      res.json(unit);
+    } catch (err) {
+      res.status(500).json({
+        message: "internal-server-error",
+      });
+    }
+  },
+
   create: async (req: Request<{}, {}, RegisterInput>, res: Response) => {
     try {
       await prisma.unit_Item.create({

@@ -2,6 +2,8 @@
 import { ref, watch, onUnmounted } from "vue";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
+import { Trash } from "@lucide/vue";
+import { useAlertDialog } from "../../../composables/useAlertDialog";
 dayjs.extend(duration);
 
 const props = defineProps<{
@@ -11,6 +13,7 @@ const props = defineProps<{
   rawEndTime: dayjs.Dayjs;
 }>();
 
+const { confirm } = useAlertDialog();
 const playDate = ref<string>();
 const playTime = ref<string>();
 const remainingTime = ref<string>();
@@ -55,6 +58,16 @@ const formatRemainingTimeToPercentage = (
   const clampedPercentage = Math.min(Math.max(percentage, 0), 100);
 
   return Number(clampedPercentage.toFixed(2));
+};
+
+const cancelRent = async () => {
+  const cnf = await confirm({
+    title: "Batalkan Sewa?",
+    message: "Unit akan dibatalkan status sewanya",
+    variant: "warning",
+    confirmText: "Oke, Lanjut",
+    cancelText: "Batal",
+  });
 };
 
 const formatTime = (date: dayjs.Dayjs | string, format: string) =>
@@ -178,27 +191,33 @@ onUnmounted(stopTicking);
         <div class="text-xs font-semibold text-gray-500 mt-2">
           <span>{{ remainingTimePercentage }}%</span>
         </div>
+        <button
+          class="mt-5 flex-1 p-3 w-full flex items-center justify-center gap-1.5 h-10 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 active:scale-[0.97] transition-all cursor-pointer"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
+          Tambah 1 Jam
+        </button>
       </div>
     </div>
 
-    <div class="px-5 pb-5 pt-1 flex items-center gap-3">
+    <div class="px-5 pb-5">
       <button
-        class="flex-1 flex items-center justify-center gap-1.5 h-10 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 active:scale-[0.97] transition-all"
+        @click="cancelRent"
+        class="flex gap-1 text-red-400 text-sm cursor-pointer hover:text-red-600"
       >
-        <svg
-          class="w-4 h-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M12 4v16m8-8H4"
-          />
-        </svg>
-        Tambah 1 Jam
+        <Trash :size="16" /> <span>Batalkan Sewa</span>
       </button>
     </div>
   </div>
