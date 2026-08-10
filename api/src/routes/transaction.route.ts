@@ -3,6 +3,7 @@ import transactionController from "../controllers/transaction.controller.js";
 
 const route = Router();
 
+route.get("/", transactionController.getAll);
 route.get("/:id", transactionController.getDetail);
 route.post("/", transactionController.create);
 
