@@ -1,26 +1,22 @@
 <script setup lang="ts">
-import {
-  computed,
-  onMounted,
-  onUnmounted,
-  ref,
-  watch,
-  type ComputedRef,
-} from "vue";
+import { computed, onMounted, onUnmounted, ref, type ComputedRef } from "vue";
 import BaseLayout from "../components/__Layout.vue";
 import FnbItemSidebar from "./rental-detail/components/FnbItemSidebar.vue";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 import {
-  CircleDollarSign,
   MinusCircleIcon,
+  PlayCircle,
   PlusCircleIcon,
   Trash,
 } from "@lucide/vue";
 import Axios from "axios";
 import { useRouter } from "vue-router";
+import AlertDialog from "../components/AlertDialog.vue";
+import { useAlertDialog } from "../composables/useAlertDialog.ts";
 
 const props = defineProps<{
-  unitId: string;
+  unitId: String;
 }>();
 
 interface FnBItem {
@@ -42,6 +38,8 @@ const todaysFormattedDate = ref<string>(
 const currentTime = ref<string>(dayjs().format("HH:mm:ss"));
 const playDuration = ref<number>(1);
 
+const { alert, confirm } = useAlertDialog();
+
 let tick = 0;
 onMounted(async () => {
   try {
@@ -51,8 +49,6 @@ onMounted(async () => {
 
     unitTitle.value = data.data.title;
     unitRentPrice.value = data.data.rent_price;
-
-    console.log(data.data);
 
     tick = setInterval(() => {
       currentTime.value = dayjs().format("HH:mm:ss");
@@ -65,11 +61,6 @@ onMounted(async () => {
 
 onUnmounted(() => {
   clearInterval(tick);
-});
-
-watch(playDuration, () => {
-  console.log(playDuration.value);
-  return playDuration.value;
 });
 
 const totalRentPrice: ComputedRef<number> = computed(() => {
@@ -137,10 +128,64 @@ const fnbTotal: ComputedRef<number> = computed(() =>
 );
 
 const grandTotal = computed(() => totalRentPrice.value + fnbTotal.value);
+
+const proceedPayment = async () => {
+  const askProceed: Boolean = await confirm({
+    title: "Mulai Main?",
+    message: "Unit dimainkan sampai waktu yang ditentukan",
+    variant: "warning",
+    confirmText: "Oke, Lanjut",
+    cancelText: "Batal",
+  });
+
+  if (askProceed) {
+    try {
+      dayjs.extend(utc);
+
+      let transactionFnb = selectedFnBItems.value.map((item) => ({
+        fnb_item: item.id,
+        quantity: item.qty,
+      }));
+
+      const endTime = dayjs().add(playDuration.value, "hour").utc().format();
+
+      const payload = {
+        customer_name: customerName.value,
+        transaction_rental: [
+          {
+            unit_item: Number(props.unitId),
+            play_time: playDuration.value,
+            start_time: dayjs().utc().format(),
+            end_time: endTime,
+          },
+        ],
+        transaction_fnb: transactionFnb,
+      };
+
+      console.log(payload);
+
+      const response = await Axios.post(
+        "http://localhost:8080/transaction",
+        payload,
+      );
+      if (response.status === 200)
+        router.replace({
+          name: "rent-detail",
+          params: { id: String(props.unitId) },
+        });
+    } catch (err) {
+      return await alert({
+        title: "Terjadi Kesalahan",
+        message: "Harap coba lagi",
+        variant: "danger",
+      });
+    }
+  }
+};
 </script>
 <template>
   <BaseLayout>
-    <div class="mx-auto max-w-6xl">
+    <div class="mx-auto max-w-7xl">
       <h1 class="font-display text-2xl font-bold tracking-tight text-gray-900">
         Rencana Sewa {{ unitTitle }}
       </h1>
@@ -404,10 +449,11 @@ const grandTotal = computed(() => totalRentPrice.value + fnbTotal.value);
             </div>
 
             <button
+              @click="proceedPayment"
               class="mt-4 w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-linear-to-r from-indigo-600 to-violet-600 text-white text-sm font-semibold shadow-md shadow-indigo-200 hover:shadow-lg hover:shadow-indigo-300 active:scale-[0.98] transition-all cursor-pointer"
             >
-              <CircleDollarSign />
-              Selesaikan & Bayar
+              <PlayCircle />
+              Mulai Sewa
             </button>
           </div>
         </div>
@@ -419,4 +465,6 @@ const grandTotal = computed(() => totalRentPrice.value + fnbTotal.value);
       @pick-fnb-item="pickFnbItem"
     />
   </BaseLayout>
+
+  <AlertDialog />
 </template>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ArrowRightCircle, PlayCircle } from "@lucide/vue";
 import pslogo from "/ps-logo.webp";
 
 defineProps<{
@@ -7,15 +8,6 @@ defineProps<{
   pricePerHour: string;
   status: string;
 }>();
-
-// trigger open modal di komponen induk (RentalManagement.vue)
-const emit = defineEmits<{
-  (e: "open-modal"): void;
-}>();
-
-const handleButtonClick = () => {
-  emit("open-modal");
-};
 </script>
 
 <template>
@@ -45,31 +37,14 @@ const handleButtonClick = () => {
         </p>
 
         <div class="mt-4 flex gap-2">
-          <button
+          <RouterLink
             v-if="status === 'available'"
-            type="button"
             class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl p-3 font-medium text-white bg-indigo-600 hover:bg-indigo-800 transition-all active:scale-[0.98] cursor-pointer"
-            @click="handleButtonClick()"
+            :to="{ name: 'new-rent', params: { unitId: id } }"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="lucide lucide-circle-play-icon lucide-circle-play"
-            >
-              <path
-                d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"
-              />
-              <circle cx="12" cy="12" r="10" />
-            </svg>
+            <PlayCircle />
             <span>Mulai Sewa</span>
-          </button>
+          </RouterLink>
 
           <RouterLink
             v-if="status === 'rented'"
@@ -77,22 +52,7 @@ const handleButtonClick = () => {
             :to="{ name: 'rent-detail', params: { id } }"
           >
             <span>Disewa (-10:32)</span>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="lucide lucide-circle-arrow-right-icon lucide-circle-arrow-right"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <path d="m12 16 4-4-4-4" />
-              <path d="M8 12h8" />
-            </svg>
+            <ArrowRightCircle />
           </RouterLink>
         </div>
       </div>

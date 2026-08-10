@@ -2,41 +2,8 @@
 import BaseLayout from "../components/__Layout.vue";
 import UnitCard from "../components/UnitCard.vue";
 import Axios from "axios";
-import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
 
-import { onMounted, ref, computed } from "vue";
-
-interface FnBItem {
-  id: number;
-  name: string;
-  price: number;
-  qty: number;
-}
-
-interface PayloadFnB {
-  fnb_item: number;
-  quantity: number;
-}
-
-const fnbData = ref<FnBItem[]>([]);
-
-const fnbTotal = computed(() =>
-  fnbData.value.reduce((sum, item) => sum + item.price * item.qty, 0),
-);
-
-document.title = "Sewa | Reno Rental";
-
-const isModalOpen = ref<Boolean>(false);
-
-const openModal = (targetId: number) => {
-  isModalOpen.value = true;
-  selectedPSUnit.value = targetId;
-};
-
-const closeModal = () => {
-  isModalOpen.value = false;
-};
+import { onMounted, ref } from "vue";
 
 const formatRupiah = (angka: number): string => {
   return new Intl.NumberFormat("id-ID", {
@@ -56,6 +23,8 @@ interface Unit {
 const unitData = ref<Unit[]>([]);
 
 onMounted(async () => {
+  document.title = "Sewa | Reno Rental";
+
   const response = await Axios.get("http://localhost:8080/unit");
 
   if (response.data.length == 0) {
@@ -70,76 +39,7 @@ onMounted(async () => {
       status: el.status,
     });
   });
-
-  await getFnbData();
 });
-
-async function getFnbData() {
-  const response = await Axios.get("http://localhost:8080/fnb");
-
-  if (response.data.length == 0) {
-    console.log("Data Unit tidak ada");
-  }
-
-  response.data.fnb.forEach((el: any) => {
-    fnbData.value.push({
-      id: el.id,
-      name: el.title,
-      price: el.price,
-      qty: 0,
-    });
-  });
-}
-
-const customerName = ref<String>("");
-const selectedPSUnit = ref<Number>();
-const playTime = ref<number>(0);
-
-const increaseQty = (id: number) => {
-  const item = fnbData.value.find((f) => f.id === id);
-  if (item) item.qty++;
-};
-
-const decreaseQty = (id: number) => {
-  const item = fnbData.value.find((f) => f.id === id);
-  if (item && item.qty > 0) item.qty--;
-};
-
-function proceedTransaction() {
-  // 1. Ambil waktu sekarang dulu
-  const dateNow = new Date().toISOString();
-
-  dayjs.extend(utc);
-
-  const dateAfterAddition: string = dayjs()
-    .add(playTime.value, "hour")
-    .utc()
-    .format();
-
-  const selectedFnB: PayloadFnB[] = fnbData.value
-    .filter((item) => item.qty >= 1)
-    .map((item) => ({
-      fnb_item: item.id,
-      quantity: item.qty,
-    }));
-
-  const payload = {
-    customer_name: customerName.value,
-    transaction_rental: [
-      {
-        unit_item: selectedPSUnit.value,
-        play_time: playTime.value,
-        start_time: dateNow,
-        end_time: dateAfterAddition,
-      },
-    ],
-    transaction_fnb: selectedFnB,
-  };
-
-  const response = Axios.post("http://localhost:8080/transaction", payload);
-
-  console.log(response);
-}
 </script>
 
 <template>
@@ -300,177 +200,7 @@ function proceedTransaction() {
             :name="unit.title"
             :price-per-hour="unit.rent_price"
             :status="unit.status"
-            @open-modal="openModal(unit.id)"
-            @open-edit-modal="openModal(unit.id)"
           />
-        </div>
-      </div>
-    </div>
-
-    <div v-if="isModalOpen" class="fixed inset-0 z-50">
-      <div class="absolute inset-0 bg-black/50" @click="closeModal" />
-      <div class="relative flex min-h-screen items-center justify-center p-4">
-        <div class="relative w-full max-w-3xl rounded-2xl bg-white shadow-2xl">
-          <div
-            class="flex items-center justify-between border-b border-gray-100 px-5 py-4"
-          >
-            <h3 class="font-display text-[15px] font-semibold">
-              Buat Sewa Baru
-            </h3>
-            <button
-              class="grid h-8 w-8 place-items-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900"
-              type="button"
-              @click="closeModal"
-            >
-              <svg
-                class="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-
-          <div class="space-y-4 px-5 py-5">
-            <div>
-              <label class="mb-1.5 block text-sm font-medium"
-                >Nama Customer</label
-              >
-              <input
-                type="text"
-                v-model="customerName"
-                placeholder="Contoh: Serum Wajah 30ml"
-                class="h-10 w-full rounded-lg border border-gray-200 px-3.5 text-sm outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-              />
-            </div>
-            <div>
-              <label class="mb-1.5 block text-sm font-medium"
-                >Durasi Main/Sewa</label
-              >
-              <div class="flex">
-                <input
-                  type="number"
-                  v-model="playTime"
-                  class="h-10 w-full rounded-l-lg border border-gray-200 px-3.5 text-sm outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                />
-                <div class="bg-gray-200 py-2 px-5 font-medium rounded-r-lg">
-                  Jam
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="border-t border-gray-100 px-5 py-4">
-            <div class="mb-3 flex items-center justify-between">
-              <h3 class="text-sm font-semibold text-gray-900">
-                Pesanan Lainnya (FnB)
-              </h3>
-              <span
-                v-if="fnbTotal > 0"
-                class="text-xs font-semibold text-indigo-600"
-              >
-                Subtotal: {{ formatRupiah(fnbTotal) }}
-              </span>
-            </div>
-
-            <div id="fnb-id" class="max-h-52 space-y-2 overflow-y-auto pr-1">
-              <div
-                v-for="item in fnbData"
-                :key="item.id"
-                class="flex items-center justify-between rounded-xl border border-gray-200 px-3 py-2.5 transition-colors hover:bg-gray-50"
-              >
-                <div class="min-w-0">
-                  <p class="truncate text-sm font-medium text-gray-900">
-                    {{ item.name }}
-                  </p>
-                  <p class="text-xs text-gray-500">
-                    {{ formatRupiah(item.price) }}
-                  </p>
-                </div>
-
-                <div class="flex items-center gap-2">
-                  <button
-                    type="button"
-                    class="grid h-7 w-7 place-items-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
-                    :disabled="item.qty === 0"
-                    @click="decreaseQty(item.id)"
-                  >
-                    <svg
-                      class="h-3.5 w-3.5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M20 12H4"
-                      />
-                    </svg>
-                  </button>
-
-                  <span
-                    class="w-5 text-center text-sm font-semibold text-gray-900"
-                  >
-                    {{ item.qty }}
-                  </span>
-
-                  <button
-                    type="button"
-                    class="grid h-7 w-7 place-items-center rounded-lg bg-indigo-600 text-white transition-colors hover:bg-indigo-700 active:scale-95"
-                    @click="increaseQty(item.id)"
-                  >
-                    <svg
-                      class="h-3.5 w-3.5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M12 4v16m8-8H4"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div
-            class="flex items-center gap-2.5 border-t border-gray-100 px-5 py-4"
-          >
-            <h1 class="text-2xl">Total Bayar: <span>Rp12.000.000,00</span></h1>
-          </div>
-
-          <div
-            class="flex items-center justify-end gap-2.5 border-t border-gray-100 px-5 py-4"
-          >
-            <button
-              class="py-2 px-4 rounded-lg border border-gray-200 text-sm font-medium transition-colors hover:bg-gray-50 cursor-pointer"
-              type="button"
-              @click="closeModal"
-            >
-              Batal
-            </button>
-            <button
-              class="py-2 px-4 rounded-lg bg-indigo-600 text-sm font-medium text-white shadow-indigo-200 transition-all hover:bg-indigo-700 active:scale-[0.97] cursor-pointer"
-              type="button"
-              @click="proceedTransaction"
-            >
-              Simpan
-            </button>
-          </div>
         </div>
       </div>
     </div>
