@@ -193,16 +193,36 @@ const endpoint = {
     const start_date = req.query.start_date;
     const end_date = req.query.end_date;
 
-    const getUnitTransaction = await prisma.transaction_Item_Unit.findMany({
-      include: {
-        transaction: {
-          select: { total: true },
+    const totalTransaction = await prisma.transaction.count();
+    const aggregateRentedTransaction =
+      await prisma.transaction_Item_Unit.aggregate({
+        _sum: {
+          sub_total: true,
+        },
+      });
+    const aggregateFnbTransaction = await prisma.transaction_Item_Fnb.aggregate(
+      {
+        _sum: {
+          sub_total: true,
         },
       },
-      where: { transaction: { id: 15 } },
-    });
+    );
 
-    res.json(getUnitTransaction);
+    const rentalTransaction = aggregateRentedTransaction._sum.sub_total ?? 0;
+    const fnbTransaction = aggregateFnbTransaction._sum.sub_total ?? 0;
+
+    const jsonPayload = {
+      summary: {
+        rentalTransaction,
+        totalTransaction,
+        fnbTransaction: fnbTransaction,
+        total: rentalTransaction + fnbTransaction,
+        totalCash: 0,
+        totalQris: 0,
+      },
+    };
+
+    res.json(jsonPayload);
   },
 
   getDetail: async (req: Request, res: Response) => {

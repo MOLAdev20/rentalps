@@ -89,10 +89,10 @@ const closeFilterOnOutside = (e: MouseEvent) => {
 // ================= Data State =================
 const loading = ref(false);
 const summary = ref({
-  totalOmset: 0,
-  pendapatanSewa: 0,
-  pendapatanFnb: 0,
-  totalTransaksi: 0,
+  totalTransaction: 0,
+  rentalTransaction: 0,
+  fnbTransaction: 0,
+  total: 0,
   totalCash: 0,
   totalQris: 0,
 });
@@ -123,19 +123,22 @@ const charts = shallowRef<{ [key: string]: Chart | null }>({
 const fetchFinancialData = async () => {
   loading.value = true;
   try {
-    const response = await Axios.get("http://localhost:8080/financial-report", {
-      params: {
-        start_date: startDate.value,
-        end_date: endDate.value,
+    const response = await Axios.get(
+      "http://localhost:8080/transaction/financial-statements",
+      {
+        params: {
+          start_date: startDate.value,
+          end_date: endDate.value,
+        },
       },
-    });
+    );
 
     const resData = response.data || {};
     summary.value = resData.summary || {
-      totalOmset: 3850000,
-      pendapatanSewa: 2600000,
-      pendapatanFnb: 1250000,
-      totalTransaksi: 142,
+      totalTransaction: 3850000,
+      rentalTransaction: 2600000,
+      fnbTransaction: 1250000,
+      total: 142,
       totalCash: 2150000,
       totalQris: 1700000,
     };
@@ -249,7 +252,10 @@ const renderCharts = () => {
         datasets: [
           {
             label: "Pendapatan",
-            data: [summary.value.pendapatanSewa, summary.value.pendapatanFnb],
+            data: [
+              summary.value.rentalTransaction,
+              summary.value.fnbTransaction,
+            ],
             backgroundColor: ["#6366f1", "#f59e0b"],
             borderRadius: 6,
           },
@@ -451,7 +457,7 @@ onUnmounted(() => {
             Total Omset Gross
           </p>
           <p class="mt-2 font-display text-2xl font-bold text-slate-900">
-            {{ currencyFormat(summary.totalOmset) }}
+            {{ currencyFormat(summary.total) }}
           </p>
         </div>
 
@@ -469,7 +475,7 @@ onUnmounted(() => {
             Pendapatan Sewa PS
           </p>
           <p class="mt-2 font-display text-2xl font-bold text-slate-900">
-            {{ currencyFormat(summary.pendapatanSewa) }}
+            {{ currencyFormat(summary.rentalTransaction) }}
           </p>
         </div>
 
@@ -487,7 +493,7 @@ onUnmounted(() => {
             Penjualan FnB
           </p>
           <p class="mt-2 font-display text-2xl font-bold text-slate-900">
-            {{ currencyFormat(summary.pendapatanFnb) }}
+            {{ currencyFormat(summary.fnbTransaction) }}
           </p>
         </div>
 
@@ -505,8 +511,7 @@ onUnmounted(() => {
             Total Transaksi
           </p>
           <p class="mt-2 font-display text-2xl font-bold text-slate-900">
-            {{ summary.totalTransaksi }}
-            <span class="text-sm font-medium text-slate-500">Trx</span>
+            {{ summary.totalTransaction }}
           </p>
         </div>
       </div>
@@ -665,13 +670,13 @@ onUnmounted(() => {
               <tr>
                 <td class="px-5 py-4 font-bold text-slate-900">TOTAL REKAP</td>
                 <td class="px-5 py-4 text-center font-bold text-slate-900">
-                  {{ summary.totalTransaksi }}
+                  {{ summary.total }}
                 </td>
                 <td class="px-5 py-4 text-right font-bold text-slate-900">
-                  {{ currencyFormat(summary.pendapatanSewa) }}
+                  {{ currencyFormat(summary.rentalTransaction) }}
                 </td>
                 <td class="px-5 py-4 text-right font-bold text-slate-900">
-                  {{ currencyFormat(summary.pendapatanFnb) }}
+                  {{ currencyFormat(summary.fnbTransaction) }}
                 </td>
                 <td class="px-5 py-4 text-right font-bold text-emerald-600">
                   {{ currencyFormat(summary.totalCash) }}
@@ -682,7 +687,7 @@ onUnmounted(() => {
                 <td
                   class="px-5 py-4 text-right font-bold text-indigo-600 text-base"
                 >
-                  {{ currencyFormat(summary.totalOmset) }}
+                  {{ currencyFormat(summary.totalTransaction) }}
                 </td>
               </tr>
             </tfoot>
