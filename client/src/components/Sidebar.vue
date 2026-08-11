@@ -5,6 +5,7 @@ import {
   Monitor,
   ScrollText,
   Utensils,
+  Wallet,
 } from "@lucide/vue";
 import SidebarLink from "./SidebarLink.vue";
 
@@ -68,6 +69,12 @@ defineEmits<{
               <ScrollText :size="18" />
             </template>
             <template #title>Laporan Transaksi</template>
+          </SidebarLink>
+          <SidebarLink :to="'/financial-statements'" :collapsed="collapsed">
+            <template #icon>
+              <Wallet :size="18" />
+            </template>
+            <template #title>Laporan Keuangan</template>
           </SidebarLink>
         </div>
       </div>

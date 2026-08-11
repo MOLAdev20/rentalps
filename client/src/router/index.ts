@@ -6,6 +6,7 @@ import RentailDetail from "../pages/rental-detail/index.vue";
 import NewRental from "../pages/NewRental.vue";
 import NotFound from "../pages/NotFound.vue";
 import TransactionReport from "../pages/TransactionReport.vue";
+import FinancialStatements from "../pages/FinancialStatements.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -56,6 +57,11 @@ const router = createRouter({
       path: "/transaction-report",
       name: "transaction-report",
       component: TransactionReport,
+    },
+    {
+      path: "/financial-statements",
+      name: "financial-statements",
+      component: FinancialStatements,
     },
     // --- Wajib ditaro di paling bawah ---
     {
