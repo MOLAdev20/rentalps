@@ -1,95 +1,209 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, onUnmounted, ref, computed } from "vue";
 import Axios from "axios";
 import toast, { Toaster } from "vue3-hot-toast";
 
 import BaseLayout from "../components/__Layout.vue";
-import { Printer } from "@lucide/vue";
+import {
+  EllipsisVertical,
+  Printer,
+  X,
+  Eye,
+  Trash2,
+  Calendar,
+  Clock,
+  CreditCard,
+  Gamepad2,
+  UtensilsCrossed,
+  Play,
+} from "@lucide/vue";
+import dayjs from "dayjs";
+import { useAlertDialog } from "../composables/useAlertDialog";
 
-document.title = "Laporan Transaksi | Reno Rental";
+const { confirm } = useAlertDialog();
 
-interface Unit {
+interface FnbOrderItem {
   id: number;
   title: string;
-  rent_price: number;
-  description: string;
-  status: string;
-  created_at: string;
-  updated_at: string;
+  price: number;
+  qty: number;
+  subTotal: number;
 }
 
-const title = ref<String>();
-const description = ref<String>();
-const rent_price = ref<number>(3000);
-const unitData = ref<Unit[]>([]);
+interface TransactionLogs {
+  id: number;
+  transaction_no: string;
+  customer_name: string;
+  playDuration: string;
+  total: number;
+  created_at: string;
+  unit_ps: string;
+  payment_method: string;
+  status: string;
+  // ==== field tambahan buat kebutuhan sidebar detail ====
+  rent_price_per_hour: number;
+  start_time: string;
+  end_time: string;
+  fnb_items: FnbOrderItem[];
+}
 
-const isModalOpen = ref(false);
+const transactionData = ref<TransactionLogs[]>([]);
 
-onMounted(() => {
-  fetchData();
-});
+onMounted(async () => {
+  document.title = "Laporan Transaksi | Reno Rental";
 
-const fetchData = async () => {
   try {
-    const response = await Axios.get("http://localhost:8080/unit");
-    unitData.value = response.data.unit;
-  } catch (err) {
-    if (err.status == 500) {
-      toast.error("Data gagal dimuat. Harap coba lagi");
-    }
-  }
-};
+    const response = await Axios.get("http://localhost:8080/transaction")!;
 
-const saveData = async () => {
-  try {
-    const response = await Axios.post("http://localhost:8080/unit", {
-      title: title.value,
-      description: description.value,
-      rent_price: rent_price.value,
+    response.data.map((item: any) => {
+      transactionData.value.push({
+        id: item.id,
+        transaction_no: item.transaction_no,
+        customer_name: item.customer_name,
+        playDuration: item.units[0].play_time,
+        total: item.total,
+        created_at: item.created_at,
+        unit_ps: item.units[0].title,
+        // TODO: sesuaikan nama field-field di bawah ini dengan response API asli kamu
+        payment_method: "cash",
+        status: "selesai",
+        rent_price_per_hour: item.units[0].rent_price ?? 0,
+        start_time: item.units[0].start_time ?? item.created_at,
+        end_time: item.units[0].end_time ?? item.created_at,
+        fnb_items: item.fnbs.map((fnb: any) => ({
+          id: fnb.id,
+          title: fnb.title,
+          price: fnb.price,
+          qty: fnb.quantity,
+          subTotal: fnb.sub_total,
+        })),
+      });
     });
 
-    if (response.data.message == "unit-created") {
-      toast.success("Data berhasil disimpan");
-      isModalOpen.value = false;
-      fetchData();
-    }
+    console.log(transactionData.value);
   } catch (err) {
-    toast.error("Kesalahan. Harap coba lagi");
+    toast.error("Data gagal dimuat. Harap coba lagi");
   }
-};
-
-const openModal = () => {
-  isModalOpen.value = true;
-};
-
-const closeModal = () => {
-  isModalOpen.value = false;
-};
+});
 
 const currencyFormat = (value: number) =>
   new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(value);
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+    .format(value)
+    .replace(/\s+/g, "");
 
 const formatDateTime = (value: string) =>
-  new Intl.DateTimeFormat("id-ID", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  dayjs(value).format("DD-MM-YYYY HH:mm");
+const formatTime = (value: string) => dayjs(value).format("HH:mm");
 
-const statusStyles: Record<string, string> = {
-  tersedia: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  aktif: "bg-indigo-50 text-indigo-700 ring-indigo-200",
-  dipakai: "bg-indigo-50 text-indigo-700 ring-indigo-200",
-  maintenance: "bg-amber-50 text-amber-700 ring-amber-200",
-  nonaktif: "bg-slate-100 text-slate-600 ring-slate-200",
-};
+// ================= Sidebar Detail Transaksi =================
+const isSidebarOpen = ref(false);
+const selectedTransaction = ref<TransactionLogs | null>(null);
 
-const getStatusClass = (status: string) =>
-  statusStyles[status.toLowerCase()] ??
-  "bg-slate-100 text-slate-600 ring-slate-200";
+const fnbTotal = computed(() =>
+  (selectedTransaction.value?.fnb_items ?? []).reduce(
+    (sum, item) => sum + item.price * item.qty,
+    0,
+  ),
+);
+
+const sewaTotal = computed(() => {
+  if (!selectedTransaction.value) return 0;
+  return selectedTransaction.value.total - fnbTotal.value;
+});
+
+function openDetail(transaction: TransactionLogs) {
+  selectedTransaction.value = transaction;
+  isSidebarOpen.value = true;
+}
+
+function closeDetail() {
+  isSidebarOpen.value = false;
+}
+
+// ================= Floating Menu per Row =================
+const activeMenuId = ref<number | null>(null);
+const menuPosition = ref({ top: 0, left: 0 });
+
+const activeTransaction = computed(
+  () => transactionData.value.find((t) => t.id === activeMenuId.value) ?? null,
+);
+
+function toggleMenu(event: MouseEvent, transaction: TransactionLogs) {
+  event.stopPropagation();
+  if (activeMenuId.value === transaction.id) {
+    activeMenuId.value = null;
+    return;
+  }
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  const menuWidth = 190;
+  menuPosition.value = {
+    top: rect.bottom + 6,
+    left: Math.max(8, rect.right - menuWidth),
+  };
+  activeMenuId.value = transaction.id;
+}
+
+function closeMenu() {
+  activeMenuId.value = null;
+}
+
+function handleClickOutside(event: MouseEvent) {
+  const target = event.target as HTMLElement;
+  if (!target.closest(".floating-menu") && !target.closest(".menu-trigger")) {
+    closeMenu();
+  }
+}
+
+onMounted(() => {
+  window.addEventListener("click", handleClickOutside);
+  window.addEventListener("scroll", closeMenu, true);
+  window.addEventListener("resize", closeMenu);
+});
+onUnmounted(() => {
+  window.removeEventListener("click", handleClickOutside);
+  window.removeEventListener("scroll", closeMenu, true);
+  window.removeEventListener("resize", closeMenu);
+});
+
+function lihatDetail(transaction: TransactionLogs) {
+  closeMenu();
+  openDetail(transaction);
+}
+
+function cetakStruk(transaction: TransactionLogs) {
+  closeMenu();
+  // TODO: sambungin ke fitur cetak struk / generate PDF
+  toast.success(`Menyiapkan struk ${transaction.transaction_no}`);
+}
+
+async function hapusTransaksi(transaction: TransactionLogs) {
+  closeMenu();
+  const ok = await confirm({
+    title: "Hapus transaksi ini?",
+    message: `Transaksi ${transaction.transaction_no} akan dihapus permanen dan gak bisa dikembaliin.`,
+    variant: "danger",
+    confirmText: "Ya, Hapus",
+    cancelText: "Batal",
+  });
+  if (!ok) return;
+
+  try {
+    // TODO: sesuaikan endpoint hapus transaksi
+    await Axios.delete(`http://localhost:8080/transaction/${transaction.id}`);
+    transactionData.value = transactionData.value.filter(
+      (t) => t.id !== transaction.id,
+    );
+    if (selectedTransaction.value?.id === transaction.id) closeDetail();
+    toast.success("Transaksi berhasil dihapus");
+  } catch (err) {
+    toast.error("Gagal menghapus transaksi");
+  }
+}
 </script>
 
 <template>
@@ -130,7 +244,7 @@ const getStatusClass = (status: string) =>
           <div
             class="rounded-full bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500"
           >
-            {{ unitData.length }} unit
+            {{ transactionData.length }} unit
           </div>
         </div>
 
@@ -138,81 +252,85 @@ const getStatusClass = (status: string) =>
           <table class="min-w-full divide-y divide-slate-100 text-left text-sm">
             <thead class="bg-slate-50/80">
               <tr class="text-xs uppercase tracking-wide text-slate-500">
-                <th class="px-5 py-3 font-medium">Tanggal Transaksi</th>
-                <th class="px-5 py-3 font-medium">Unit PS</th>
-                <th class="px-5 py-3 font-medium">Durasi</th>
+                <th class="px-5 py-3 font-medium">TGL Transaksi</th>
+                <th class="px-5 py-3 font-medium">Unit</th>
+                <th class="px-5 py-3 font-medium">Durasi Main</th>
                 <th class="px-5 py-3 font-medium">Metode Bayar</th>
-                <th class="px-5 py-3 font-medium">Total Bayar</th>
+                <th class="px-5 py-3 font-medium">Total</th>
                 <th class="px-5 py-3 font-medium">Status</th>
-                <th class="px-5 py-3 font-medium">Aksi</th>
+                <th class="px-5 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 bg-white">
               <tr
-                v-for="unit in unitData"
-                :key="unit.id"
-                class="transition-colors hover:bg-slate-50/70"
+                v-for="transaction in transactionData"
+                :key="transaction.id"
+                @click="openDetail(transaction)"
+                class="cursor-pointer transition-colors hover:bg-slate-50/70"
+                :class="
+                  selectedTransaction?.id === transaction.id && isSidebarOpen
+                    ? 'bg-indigo-200'
+                    : ''
+                "
               >
                 <td class="px-5 py-4">
-                  <p class="truncate font-semibold text-slate-900">
-                    {{ unit.title }}
+                  <p class="truncate text-slate-600">
+                    {{ formatDateTime(transaction.created_at) }}
                   </p>
                 </td>
 
-                <td
-                  class="whitespace-nowrap px-5 py-4 font-semibold text-slate-900"
-                >
-                  {{ currencyFormat(unit.rent_price) }}
-                </td>
-
-                <td class="px-5 py-4">
-                  <span
-                    class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1"
-                    :class="getStatusClass(unit.status)"
-                  >
-                    {{ unit.status }}
-                  </span>
+                <td class="whitespace-nowrap px-5 py-4 text-slate-600">
+                  {{ transaction.unit_ps }}
                 </td>
 
                 <td class="px-5 py-4 text-slate-600">
                   <p class="max-w-sm line-clamp-2">
-                    {{ unit.description }}
+                    {{ transaction.playDuration }} Jam
                   </p>
                 </td>
 
-                <td class="whitespace-nowrap px-5 py-4 text-slate-500">
-                  {{ formatDateTime(unit.created_at) }}
+                <td class="whitespace-nowrap px-5 py-4 text-slate-600">
+                  {{ transaction.payment_method }}
                 </td>
 
-                <td class="whitespace-nowrap px-5 py-4 text-slate-500">
-                  {{ formatDateTime(unit.updated_at) }}
+                <td
+                  class="whitespace-nowrap px-5 py-4 text-slate-900 font-semibold"
+                >
+                  {{ currencyFormat(transaction.total) }}
                 </td>
 
-                <td class="px-5 py-4">
-                  <div class="flex items-center gap-2">
-                    <button
-                      type="button"
-                      class="inline-flex h-9 items-center justify-center rounded-xl bg-indigo-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-indigo-700"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50"
-                    >
-                      Detail
-                    </button>
-                    <button
-                      type="button"
-                      class="inline-flex h-9 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-100"
-                    >
-                      Hapus
-                    </button>
-                  </div>
+                <td class="whitespace-nowrap px-5 py-4">
+                  <span
+                    class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
+                    :class="
+                      transaction.status === 'Selesai'
+                        ? 'bg-emerald-50 text-emerald-600'
+                        : 'bg-amber-50 text-amber-600'
+                    "
+                  >
+                    <span
+                      class="h-1.5 w-1.5 rounded-full"
+                      :class="
+                        transaction.status === 'Selesai'
+                          ? 'bg-emerald-500'
+                          : 'bg-amber-500'
+                      "
+                    ></span>
+                    {{ transaction.status }}
+                  </span>
+                </td>
+
+                <td class="px-5 py-4 text-slate-500">
+                  <button
+                    @click="toggleMenu($event, transaction)"
+                    class="menu-trigger p-2 rounded-full cursor-pointer border border-gray-200 hover:bg-gray-200 transition-colors"
+                  >
+                    <EllipsisVertical :size="12" />
+                  </button>
                 </td>
               </tr>
 
-              <tr v-if="!unitData.length">
+              <tr v-if="!transactionData.length">
                 <td colspan="7" class="px-5 py-14 text-center">
                   <div class="mx-auto max-w-sm">
                     <div
@@ -235,7 +353,7 @@ const getStatusClass = (status: string) =>
                     <p class="text-sm font-semibold text-slate-900">
                       Belum ada data unit
                     </p>
-                    <p class="mt-1 text-sm text-slate-500">
+                    <p class="mt-1 text-sm text-slate-600">
                       Tambahkan unit baru untuk mulai mengelola daftar PS.
                     </p>
                   </div>
@@ -246,91 +364,254 @@ const getStatusClass = (status: string) =>
         </div>
       </section>
     </div>
-    <Toaster />
 
-    <div v-if="isModalOpen" class="fixed inset-0 z-50">
-      <div class="absolute inset-0 bg-black/50" @click="closeModal" />
-      <div class="relative flex min-h-screen items-center justify-center p-4">
-        <div class="relative w-full max-w-md rounded-2xl bg-white shadow-2xl">
-          <div
-            class="flex items-center justify-between border-b border-gray-100 px-5 py-4"
+    <!-- ============ Floating Menu (per row) ============ -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition-all duration-150 ease-out"
+        enter-from-class="opacity-0 scale-95 -translate-y-1"
+        enter-to-class="opacity-100 scale-100 translate-y-0"
+        leave-active-class="transition-all duration-100 ease-in"
+        leave-from-class="opacity-100 scale-100 translate-y-0"
+        leave-to-class="opacity-0 scale-95 -translate-y-1"
+      >
+        <div
+          v-if="activeMenuId !== null && activeTransaction"
+          class="floating-menu fixed z-60 w-52 rounded-xl border border-slate-200 bg-white py-1.5 shadow-lg"
+          :style="{
+            top: menuPosition.top + 'px',
+            left: menuPosition.left + 'px',
+          }"
+        >
+          <button
+            @click="lihatDetail(activeTransaction)"
+            class="flex w-full items-center gap-2.5 px-3.5 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
           >
-            <h3 class="font-display text-[15px] font-semibold">
-              Tambah Data Baru
-            </h3>
+            <Eye :size="15" /> Lihat Detail
+          </button>
+          <button
+            @click="cetakStruk(activeTransaction)"
+            class="flex w-full items-center gap-2.5 px-3.5 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            <Printer :size="15" /> Cetak Struk
+          </button>
+          <div class="my-1 border-t border-slate-100"></div>
+          <button
+            @click="hapusTransaksi(activeTransaction)"
+            class="flex w-full items-center gap-2.5 px-3.5 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
+          >
+            <Trash2 :size="15" /> Hapus Transaksi
+          </button>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- ============ Sidebar Detail Transaksi ============ -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition-opacity duration-300"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition-opacity duration-200"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-if="isSidebarOpen"
+          @click="closeDetail"
+          class="fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px]"
+        ></div>
+      </Transition>
+
+      <Transition
+        enter-active-class="transition-transform duration-300 ease-out"
+        enter-from-class="translate-x-full"
+        enter-to-class="translate-x-0"
+        leave-active-class="transition-transform duration-200 ease-in"
+        leave-from-class="translate-x-0"
+        leave-to-class="translate-x-full"
+      >
+        <div
+          v-if="isSidebarOpen && selectedTransaction"
+          class="fixed top-0 right-0 z-50 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl"
+        >
+          <!-- Header -->
+          <div
+            class="flex shrink-0 items-center justify-between border-b border-slate-100 px-6 py-5"
+          >
+            <div>
+              <h3 class="font-display text-lg font-bold text-slate-900">
+                {{ selectedTransaction.transaction_no }}
+              </h3>
+            </div>
             <button
-              class="grid h-8 w-8 place-items-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900 cursor-pointer"
-              type="button"
-              @click="closeModal"
+              @click="closeDetail"
+              class="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition-all hover:bg-slate-200 hover:text-slate-600 cursor-pointer bg-slate-100"
             >
-              <svg
-                class="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <X :size="18" />
             </button>
           </div>
 
-          <div class="space-y-4 px-5 py-5">
-            <div>
-              <label class="mb-1.5 block text-sm font-medium">Nama Unit</label>
-              <input
-                type="text"
-                placeholder="Contoh: Serum Wajah 30ml"
-                class="h-10 w-full rounded-lg border border-gray-200 px-3.5 text-sm outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                v-model="title"
-              />
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="mb-1.5 block text-sm font-medium"
-                  >Harga Sewa</label
+          <div class="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+            <!-- Hero: penyewa + total -->
+            <div class="rounded-2xl bg-indigo-500 p-5 text-white">
+              <div class="flex items-start justify-between">
+                <div>
+                  <p class="text-xs text-indigo-100">Pelanggan</p>
+                  <p class="mt-0.5 text-lg font-bold">
+                    {{ selectedTransaction.customer_name }}
+                  </p>
+                </div>
+                <span
+                  class="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold"
                 >
-                <input
-                  type="number"
-                  placeholder="Rp0"
-                  class="h-10 w-full rounded-lg border border-gray-200 px-3.5 text-sm outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                  v-model="rent_price"
-                />
+                  {{ selectedTransaction.status }}
+                </span>
+              </div>
+              <div class="mt-4 border-t border-white/20 pt-4">
+                <p class="text-xs text-indigo-100">Total Pembayaran</p>
+                <p class="mt-0.5 text-2xl font-bold">
+                  {{ currencyFormat(selectedTransaction.total) }}
+                </p>
               </div>
             </div>
+
+            <!-- Info Sesi -->
             <div>
-              <label class="mb-1.5 block text-sm font-medium">Deskripsi</label>
-              <textarea
-                class="w-full rounded-lg border border-gray-200 p-2 text-sm outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                v-model="description"
-              ></textarea>
+              <p
+                class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400 flex gap-1 items-center"
+              >
+                <Play :size="12" /> Sesi Main
+              </p>
+              <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-xl bg-slate-50 p-3.5">
+                  <p
+                    class="flex items-center gap-1.5 text-[11px] text-slate-400"
+                  >
+                    <Calendar :size="12" /> Tanggal Main
+                  </p>
+                  <p class="mt-1 text-sm font-semibold text-slate-800">
+                    {{ formatDateTime(selectedTransaction.created_at) }}
+                  </p>
+                </div>
+                <div class="rounded-xl bg-slate-50 p-3.5">
+                  <p
+                    class="flex items-center gap-1.5 text-[11px] text-slate-400"
+                  >
+                    <Gamepad2 :size="12" /> Unit
+                  </p>
+                  <p class="mt-1 text-sm font-semibold text-slate-800">
+                    {{ selectedTransaction.unit_ps }}
+                  </p>
+                </div>
+                <div class="rounded-xl bg-slate-50 p-3.5">
+                  <p
+                    class="flex items-center gap-1.5 text-[11px] text-slate-400"
+                  >
+                    <Clock :size="12" /> Waktu Main
+                  </p>
+                  <p class="mt-1 text-sm font-semibold text-slate-800">
+                    {{ formatTime(selectedTransaction.start_time) }} -
+                    {{ formatTime(selectedTransaction.end_time) }}
+                    ({{ selectedTransaction.playDuration }}
+                    Jam)
+                  </p>
+                </div>
+                <div class="rounded-xl bg-slate-50 p-3.5">
+                  <p
+                    class="flex items-center gap-1.5 text-[11px] text-slate-400"
+                  >
+                    <CreditCard :size="12" /> Metode Bayar
+                  </p>
+                  <p class="mt-1 text-sm font-semibold text-slate-800">
+                    {{ selectedTransaction.payment_method }}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Item FnB -->
+            <div>
+              <div class="mb-3 flex items-center justify-between">
+                <p
+                  class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400"
+                >
+                  <UtensilsCrossed :size="12" /> Makanan & Minuman
+                </p>
+                <span class="text-xs text-slate-400"
+                  >{{ selectedTransaction.fnb_items.length }} item</span
+                >
+              </div>
+
+              <div
+                v-if="selectedTransaction.fnb_items.length === 0"
+                class="rounded-xl bg-slate-50 py-6 text-center text-sm text-slate-400"
+              >
+                Tidak ada Makanan/Minuman yang dipesan
+              </div>
+
+              <div v-else class="space-y-2">
+                <div
+                  v-for="fnb in selectedTransaction.fnb_items"
+                  :key="fnb.id"
+                  class="flex items-center justify-between rounded-xl bg-slate-50 px-3.5 py-2.5"
+                >
+                  <div class="min-w-0">
+                    <p class="truncate text-sm font-medium text-slate-800">
+                      {{ fnb.title }}
+                    </p>
+                    <p class="text-xs text-slate-400">
+                      {{ currencyFormat(fnb.price) }} x {{ fnb.qty }}
+                    </p>
+                  </div>
+                  <p class="ml-3 shrink-0 text-sm font-semibold text-slate-900">
+                    {{ currencyFormat(fnb.price * fnb.qty) }}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Rincian Total -->
+            <div class="space-y-2 rounded-2xl border border-slate-100 p-4">
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-slate-500">
+                  Sewa PS ({{ selectedTransaction.playDuration }} jam x
+                  {{ currencyFormat(selectedTransaction.rent_price_per_hour) }})
+                </span>
+                <span class="font-medium text-slate-700">{{
+                  currencyFormat(sewaTotal)
+                }}</span>
+              </div>
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-slate-500">Makanan & Minuman</span>
+                <span class="font-medium text-slate-700">{{
+                  currencyFormat(fnbTotal)
+                }}</span>
+              </div>
+              <div
+                class="flex items-center justify-between border-t border-slate-100 pt-2"
+              >
+                <span class="text-sm font-semibold text-slate-900">TOTAL</span>
+                <span class="text-lg font-bold text-indigo-600">{{
+                  currencyFormat(selectedTransaction.total)
+                }}</span>
+              </div>
             </div>
           </div>
 
-          <div
-            class="flex items-center justify-end gap-2.5 border-t border-gray-100 px-5 py-4"
-          >
+          <!-- Footer -->
+          <div class="shrink-0 border-t border-slate-100 px-6 py-4">
             <button
-              class="h-9 rounded-lg border border-gray-200 px-4 text-sm font-medium transition-colors hover:bg-gray-50 cursor-pointer"
-              type="button"
-              @click="closeModal"
+              @click="cetakStruk(selectedTransaction)"
+              class="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 text-sm font-semibold text-white transition-all hover:bg-indigo-700 active:scale-[0.98]"
             >
-              Batal
-            </button>
-            <button
-              class="h-9 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white shadow-md shadow-indigo-200 transition-all hover:bg-indigo-700 active:scale-[0.97] cursor-pointer"
-              type="button"
-              @click="saveData"
-            >
-              Simpan
+              <Printer :size="16" /> Cetak Struk
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </Transition>
+    </Teleport>
+
+    <Toaster />
   </BaseLayout>
 </template>
