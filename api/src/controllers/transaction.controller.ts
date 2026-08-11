@@ -189,6 +189,22 @@ const endpoint = {
     }
   },
 
+  getFinancialStatements: async (req: Request, res: Response) => {
+    const start_date = req.query.start_date;
+    const end_date = req.query.end_date;
+
+    const getUnitTransaction = await prisma.transaction_Item_Unit.findMany({
+      include: {
+        transaction: {
+          select: { total: true },
+        },
+      },
+      where: { transaction: { id: 15 } },
+    });
+
+    res.json(getUnitTransaction);
+  },
+
   getDetail: async (req: Request, res: Response) => {
     try {
       let id: number = Number(req.params.id);
