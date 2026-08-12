@@ -18,6 +18,17 @@ enum Unit_Item_Status {
   maintainance
 }
 
+enum Transaction_Payment_Method {
+  qris
+  cash
+}
+
+enum Transaction_Status {
+  pending
+  complete
+  cancel
+}
+
 model Unit_Item {
   id                   Int                     @id @default(autoincrement())
   title                String
@@ -47,12 +58,14 @@ model Fnb_Item {
 }
 
 model Transaction {
-  id            Int      @id @default(autoincrement())
-  customer_name String
-  subtotal      Float
-  total         Float
-  created_at    DateTime @default(now())
-  updated_at    DateTime @default(now())
+  id              Int           @id @default(autoincrement())
+  customer_name   String
+  subtotal        Float
+  total           Float
+  payment_method  Transaction_Payment_Method @default(cash)
+  status          Transaction_Status @default(pending)
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @default(now())
 
   transactionItemUnits Transaction_Item_Unit[]
   transactionItemFnbs  Transaction_Item_Fnb[]

@@ -133,44 +133,19 @@ const fetchFinancialData = async () => {
       },
     );
 
-    const resData = response.data || {};
-    summary.value = resData.summary || {
-      totalTransaction: 3850000,
-      rentalTransaction: 2600000,
-      fnbTransaction: 1250000,
-      total: 142,
-      totalCash: 2150000,
-      totalQris: 1700000,
-    };
-    recapitulationData.value = resData.recapitulation || [
-      {
-        date: "11/08/2026",
-        trx: 20,
-        rental: 600000,
-        fnb: 350000,
-        cash: 400000,
-        qris: 550000,
-        total: 950000,
-      },
-      {
-        date: "10/08/2026",
-        trx: 15,
-        rental: 450000,
-        fnb: 200000,
-        cash: 300000,
-        qris: 350000,
-        total: 650000,
-      },
-      {
-        date: "09/08/2026",
-        trx: 22,
-        rental: 800000,
-        fnb: 300000,
-        cash: 600000,
-        qris: 500000,
-        total: 1100000,
-      },
-    ];
+    const resData = response.data;
+    summary.value = resData.summary;
+    resData.recapitulation.map((item: any) => {
+      recapitulationData.value.push({
+        date: dayjs(item.date).format("DD-MM-YYYY").toString(),
+        trx: item.trx,
+        rental: item.rental,
+        fnb: item.fnb,
+        cash: item.cash,
+        qris: item.qris,
+        total: item.total,
+      });
+    });
 
     renderCharts();
   } catch (err) {
@@ -670,7 +645,7 @@ onUnmounted(() => {
               <tr>
                 <td class="px-5 py-4 font-bold text-slate-900">TOTAL REKAP</td>
                 <td class="px-5 py-4 text-center font-bold text-slate-900">
-                  {{ summary.total }}
+                  {{ summary.totalTransaction }}
                 </td>
                 <td class="px-5 py-4 text-right font-bold text-slate-900">
                   {{ currencyFormat(summary.rentalTransaction) }}
@@ -687,7 +662,7 @@ onUnmounted(() => {
                 <td
                   class="px-5 py-4 text-right font-bold text-indigo-600 text-base"
                 >
-                  {{ currencyFormat(summary.totalTransaction) }}
+                  {{ currencyFormat(summary.total) }}
                 </td>
               </tr>
             </tfoot>
