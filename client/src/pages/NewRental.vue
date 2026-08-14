@@ -44,7 +44,7 @@ let tick = 0;
 onMounted(async () => {
   try {
     const data = await Axios.get(
-      `http://localhost:8080/unit/available/${props.unitId}`,
+      `${import.meta.env.VITE_API_URL}/unit/available/${props.unitId}`,
     );
 
     document.title = "Sewa Baru | Reno Rental";

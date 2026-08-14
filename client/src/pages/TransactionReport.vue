@@ -53,7 +53,9 @@ onMounted(async () => {
   document.title = "Laporan Transaksi | Reno Rental";
 
   try {
-    const response = await Axios.get("http://localhost:8080/transaction")!;
+    const response = await Axios.get(
+      `${import.meta.env.VITE_API_URL}/transaction`,
+    )!;
 
     response.data.map((item: any) => {
       transactionData.value.push({

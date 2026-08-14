@@ -17,8 +17,8 @@ interface Unit {
   updated_at: string;
 }
 
-const title = ref<String>();
-const description = ref<String>();
+const title = ref<string>();
+const description = ref<string>();
 const rent_price = ref<number>(3000);
 const unitData = ref<Unit[]>([]);
 
@@ -30,9 +30,9 @@ onMounted(() => {
 
 const fetchData = async () => {
   try {
-    const response = await Axios.get("http://localhost:8080/unit");
+    const response = await Axios.get(`${import.meta.env.VITE_API_URL}/unit`);
     unitData.value = response.data.unit;
-  } catch (err) {
+  } catch (err: any) {
     if (err.status == 500) {
       toast.error("Data gagal dimuat. Harap coba lagi");
     }

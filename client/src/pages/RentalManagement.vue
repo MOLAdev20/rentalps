@@ -25,7 +25,7 @@ const unitData = ref<Unit[]>([]);
 onMounted(async () => {
   document.title = "Sewa | Reno Rental";
 
-  const response = await Axios.get("http://localhost:8080/unit");
+  const response = await Axios.get(`${import.meta.env.VITE_API_URL}/unit`);
 
   if (response.data.length == 0) {
     console.log("Data Unit tidak ada");
