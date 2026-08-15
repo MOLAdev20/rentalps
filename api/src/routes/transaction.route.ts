@@ -8,6 +8,8 @@ route.get(
   "/financial-statements",
   transactionController.getFinancialStatements,
 );
+route.post("/proceed-payment/:id", transactionController.proceedPayment);
+route.post("/generate-qris/:id", transactionController.generateQris);
 route.get("/:id", transactionController.getDetail);
 route.post("/", transactionController.create);
 

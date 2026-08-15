@@ -9,6 +9,7 @@ import FnbItemSidebar from "./components/FnbItemSidebar.vue";
 import SessionCard from "./components/SessionCard.vue";
 import { useRouter } from "vue-router";
 import AlertDialog from "../../components/AlertDialog.vue";
+import { Wallet } from "@lucide/vue";
 
 dayjs.extend(utc);
 
@@ -19,17 +20,46 @@ const router = useRouter();
 
 const paymentMethod = ref("tunai");
 const showQrisModal = ref(false);
+const qrisUrl = ref("");
+const isLoadingQris = ref(false);
 
-const handlePayment = () => {
+const handlePayment = async () => {
   if (paymentMethod.value === "qris") {
-    showQrisModal.value = true;
+    try {
+      isLoadingQris.value = true;
+      const response = await Axios.post(
+        `http://localhost:8080/transaction/generate-qris/${transactionId.value}`,
+      );
+
+      const redirectUrl = response.data.data?.redirect_url;
+
+      if (!redirectUrl) {
+        throw new Error("Snap URL tidak ditemukan");
+      }
+
+      qrisUrl.value = redirectUrl;
+      showQrisModal.value = true;
+    } catch (err) {
+      showToast("Gagal membuat QRIS. Silakan coba lagi.");
+      console.error(err);
+    } finally {
+      isLoadingQris.value = false;
+    }
   } else {
     // Logic bayar tunai biasa
-    alert("Pembayaran tunai diproses");
+    const response = await Axios.post(
+      `${import.meta.env.VITE_API_URL}/transaction/proceed-payment/${transactionId.value}`,
+      {
+        payment_method: paymentMethod.value,
+      },
+    );
+
+    console.log(response);
   }
 };
 
 // ================= Data Sesi =================
+const transactionId = ref<number>(0);
 const customerName = ref<string>("");
 const rentedUnit = ref<string>("");
 const rawStartTime = ref<dayjs.Dayjs>(dayjs());
@@ -103,6 +133,8 @@ onMounted(async () => {
       `http://localhost:8080/transaction/${props.id}`,
     );
 
+    transactionId.value = response.data.id;
+    console.log(transactionId.value);
     customerName.value = response.data.customer_name;
     rentedUnit.value = response.data.transactionItemUnits[0].unit_item.title;
     rawStartTime.value = response.data.transactionItemUnits[0].start_time;
@@ -360,7 +392,7 @@ const pickFnbItem = (catalogItem: FnbItem) => {
                   <label
                     class="flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all"
                     :class="
-                      paymentMethod === 'tunai'
+                      paymentMethod === 'cash'
                         ? 'border-indigo-600 bg-indigo-50/30 ring-1 ring-indigo-600'
                         : 'border-gray-200 bg-white hover:border-gray-300'
                     "
@@ -369,11 +401,11 @@ const pickFnbItem = (catalogItem: FnbItem) => {
                       <input
                         type="radio"
                         v-model="paymentMethod"
-                        value="tunai"
+                        value="cash"
                         class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
                       />
                       <span class="text-sm font-medium text-gray-800"
-                        >Tunai</span
+                        >Tunai/Cash</span
                       >
                     </div>
                     <svg
@@ -424,23 +456,12 @@ const pickFnbItem = (catalogItem: FnbItem) => {
               <!-- Tombol Selesaikan & Bayar -->
               <button
                 @click="handlePayment"
-                class="mt-4 w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-semibold shadow-md shadow-indigo-200 hover:shadow-lg hover:shadow-indigo-300 active:scale-[0.98] transition-all"
+                :disabled="isLoadingQris"
+                class="mt-4 w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-indigo-600 text-white text-sm font-semibold shadow-md shadow-indigo-200 active:scale-[0.98] transition-all cursor-pointer"
+                :class="isLoadingQris ? 'opacity-70 cursor-not-allowed' : ''"
               >
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <rect x="2" y="5" width="20" height="14" rx="2" />
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M2 10h20"
-                  />
-                </svg>
-                Selesaikan &amp; Bayar
+                <Wallet class="text-white" :size="16" />
+                {{ isLoadingQris ? "Memuat QRIS..." : "Selesaikan & Bayar" }}
               </button>
             </div>
           </div>
@@ -465,30 +486,38 @@ const pickFnbItem = (catalogItem: FnbItem) => {
                       >QRIS</span
                     >
                     <h4 class="font-semibold text-gray-900 text-base">
-                      Scan untuk Membayar
+                      Halaman Pembayaran QRIS
                     </h4>
                   </div>
+
+                  <p class="text-xs text-gray-500 mb-5">
+                    Jika halaman tidak tampil di dalam modal, buka tautan di bawah ini.
+                  </p>
+
+                  <div
+                    class="w-full h-[70vh] bg-gray-50 rounded-2xl border border-gray-200 overflow-hidden mb-4"
+                  >
+                    <iframe
+                      :src="qrisUrl"
+                      class="w-full h-full"
+                      title="Midtrans Snap Payment"
+                    ></iframe>
+                  </div>
+
+                  <a
+                    :href="qrisUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="w-full inline-flex items-center justify-center h-11 rounded-xl bg-indigo-600 text-white text-sm font-semibold shadow-md shadow-indigo-200 active:scale-[0.98] transition-all mb-3"
+                  >
+                    Buka di tab baru
+                  </a>
 
                   <p class="text-xs text-gray-500 mb-5">
                     Total yang harus dibayar:
                     <span class="font-semibold text-indigo-600">{{
                       formatRupiah(grandTotal)
                     }}</span>
-                  </p>
-
-                  <!-- Gambar QR Code -->
-                  <div
-                    class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm mb-4"
-                  >
-                    <img
-                      src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=EXAMPLE_QRIS_PAYMENT"
-                      alt="QRIS Code"
-                      class="w-48 h-48 sm:w-56 sm:h-56 object-contain"
-                    />
-                  </div>
-
-                  <p class="text-[11px] text-gray-400 mb-6">
-                    Mendukung GoPay, OVO, ShopeePay, Dana &amp; Mobile Banking
                   </p>
 
                   <button
