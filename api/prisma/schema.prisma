@@ -19,6 +19,7 @@ enum Unit_Item_Status {
 }
 
 enum Transaction_Payment_Method {
+  pending_payment
   qris
   cash
 }
@@ -62,7 +63,7 @@ model Transaction {
   customer_name   String
   subtotal        Float
   total           Float
-  payment_method  Transaction_Payment_Method @default(cash)
+  payment_method  Transaction_Payment_Method @default(pending_payment)
   status          Transaction_Status @default(pending)
   created_at      DateTime      @default(now())
   updated_at      DateTime      @default(now())
