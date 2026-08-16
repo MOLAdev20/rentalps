@@ -34,14 +34,20 @@ const rentPricePerHour = ref<number>(0);
 
 // ================= Data FnB =================
 interface FnbItem {
+  id: number;
+  name: string;
+  price: number;
+}
+
+interface OrderedFnbItem {
+  id: number; // order id
   fnb_item_id: number;
-  fnb_transaction_id: number;
   name: string;
   price: number;
   qty: number;
 }
 
-const fnbItems = ref<FnbItem[]>([]);
+const fnbItems = ref<OrderedFnbItem[]>([]);
 const sidebarStatus = ref<boolean>(false);
 
 // ================= Sidebar & Toast =================
@@ -56,50 +62,49 @@ function showToast(message: string) {
   }, 2200);
 }
 
-const modifyFnBTransaction = async (transactionId: number, fnbId: number) => {
-  return await Axios.post(
-    `${import.meta.env.VITE_API_URL}/transaction/add-fnb`,
-    {
-      transaction_id: transactionId,
-      fnb_id: fnbId,
-    },
-  );
-};
-
-async function incrementQty(item: FnbItem) {
+async function incrementQty(item: OrderedFnbItem) {
   try {
-    await modifyFnBTransaction(transactionId.value, item.id);
+    await Axios.get(
+      `${import.meta.env.VITE_API_URL}/transaction/change-fnb-qty/${item.id}/increase`,
+    );
     item.qty += 1;
   } catch (err) {}
 }
 
-async function decrementQty(item: FnbItem) {
+async function decrementQty(item: OrderedFnbItem) {
   if (item.qty <= 1) {
     removeFnbItem(item.id);
     return;
   }
-  await modifyFnBTransaction(transactionId.value, item.id);
+  await Axios.get(
+    `${import.meta.env.VITE_API_URL}/transaction/change-fnb-qty/${item.id}/decrease`,
+  );
   item.qty -= 1;
 }
 
 const pickFnbItem = async (catalogItem: FnbItem) => {
   try {
-    const response = await modifyFnBTransaction(
-      transactionId.value,
-      catalogItem.id,
+    const response = await Axios.post(
+      `${import.meta.env.VITE_API_URL}/transaction/pick-new-fnb`,
+      {
+        transaction_id: transactionId.value,
+        fnb_id: catalogItem.id,
+      },
     );
 
-    const newTransactionItemFnb = response.data.newFnbTransaction.id;
-
-    const existing = fnbItems.value.find((i) => i.id === catalogItem.id);
+    const existing = fnbItems.value.find(
+      (i) => i.fnb_item_id === catalogItem.id,
+    );
     if (existing) {
       existing.qty += 1;
     } else {
       fnbItems.value.push({
         ...catalogItem,
-        id: newTransactionItemFnb,
+        id: response.data.newFnbTransaction.id,
+        fnb_item_id: catalogItem.id,
         qty: 1,
       });
+      console.log(fnbItems.value);
     }
 
     showToast(`${catalogItem.name} ditambahkan`);
@@ -158,6 +163,7 @@ onMounted(async () => {
     transactionFnb.forEach((item: any) => {
       fnbItems.value.push({
         id: item.id,
+        fnb_item_id: item.fnb_item.id,
         name: item.fnb_item.title,
         price: item.fnb_item.price,
         qty: item.quantity,

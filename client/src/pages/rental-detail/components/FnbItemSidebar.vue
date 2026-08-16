@@ -1,19 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import Axios from "axios";
-import {
-  CircleX,
-  PlusCircle,
-  PlusCircleIcon,
-  Search,
-  Utensils,
-} from "@lucide/vue";
+import { CircleX, PlusCircleIcon, Search, Utensils } from "@lucide/vue";
 
 type Item = {
   id: number;
   name: string;
   price: number;
-  qty: number;
 };
 
 const searchQuery = ref<String>("");
@@ -39,7 +32,6 @@ onMounted(async () => {
           id: el.id,
           name: el.title,
           price: el.price,
-          qty: 0,
         });
       });
     }

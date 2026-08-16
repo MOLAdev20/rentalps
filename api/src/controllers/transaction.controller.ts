@@ -350,6 +350,7 @@ const endpoint = {
               sub_total: true,
               fnb_item: {
                 select: {
+                  id: true,
                   title: true,
                   description: true,
                   price: true,
@@ -485,6 +486,29 @@ const endpoint = {
           },
         });
       }
+      res.json({
+        newFnbTransaction,
+      });
+    } catch (err) {
+      res.status(500).json({
+        message: "error-update-data",
+      });
+    }
+  },
+
+  changeFnbQty: async (req: Request, res: Response) => {
+    const id = Number(req.params.id);
+    const changeType = req.params.changeType;
+
+    try {
+      const newFnbTransaction = await prisma.transaction_Item_Fnb.update({
+        where: { id },
+        data: {
+          quantity: {
+            increment: changeType == "increase" ? 1 : -1,
+          },
+        },
+      });
       res.json({
         newFnbTransaction,
       });

@@ -10,8 +10,12 @@ route.get(
 );
 route.post("/proceed-payment/:id", transactionController.proceedPayment);
 route.post("/generate-qris/:id", transactionController.generateQris);
-route.post("/add-fnb", transactionController.addFnbItem);
+route.post("/pick-new-fnb", transactionController.addFnbItem);
 route.get("/remove-fnb/:id", transactionController.removeFnBTransaction);
+route.get(
+  "/change-fnb-qty/:id/:changeType",
+  transactionController.changeFnbQty,
+);
 route.get("/:id", transactionController.getDetail);
 route.post("/", transactionController.create);
 
