@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import Axios from "axios";
+import { CircleX, PlusCircleIcon, Search, Utensils } from "@lucide/vue";
 
 type Item = {
   id: number;
   name: string;
   price: number;
-  qty: number;
 };
 
 const searchQuery = ref<String>("");
@@ -32,7 +32,6 @@ onMounted(async () => {
           id: el.id,
           name: el.title,
           price: el.price,
-          qty: 0,
         });
       });
     }
@@ -92,44 +91,22 @@ const pickFnbItem = (item: Item) => {
           </h3>
           <button
             @click="closeSidebar"
-            class="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-all"
+            class="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-all cursor-pointer"
           >
-            <svg
-              class="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <CircleX :size="20" />
           </button>
         </div>
 
         <div class="px-5 py-3 border-b border-gray-100 shrink-0">
           <div class="relative">
-            <svg
-              class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <circle cx="11" cy="11" r="7" />
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M21 21l-4.35-4.35"
-              />
-            </svg>
+            <Search
+              :size="20"
+              class="absolute top-1/2 left-3 -translate-y-1/2 text-gray-400"
+            />
             <input
               v-model="searchQuery"
               type="text"
-              placeholder="Cari item FnB..."
+              placeholder="Cari Makanan/Minuman"
               class="w-full h-10 pl-9 pr-3 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition-all"
             />
           </div>
@@ -140,12 +117,12 @@ const pickFnbItem = (item: Item) => {
             v-for="item in filteredFnbItems"
             :key="item.id"
             @click="pickFnbItem(item)"
-            class="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl hover:bg-indigo-50 active:scale-[0.98] transition-all text-left"
+            class="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl hover:bg-indigo-50 active:scale-[0.98] transition-all text-left cursor-pointer"
           >
             <div
               class="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-50 text-xl shrink-0"
             >
-              ✅
+              <Utensils />
             </div>
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium text-gray-900 truncate">
@@ -155,19 +132,7 @@ const pickFnbItem = (item: Item) => {
                 {{ item.price }}
               </p>
             </div>
-            <svg
-              class="w-4 h-4 text-indigo-400 shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2.5"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
+            <PlusCircleIcon :size="20" class="text-gray-500" />
           </button>
 
           <div

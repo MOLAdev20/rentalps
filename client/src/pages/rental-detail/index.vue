@@ -9,7 +9,7 @@ import FnbItemSidebar from "./components/FnbItemSidebar.vue";
 import SessionCard from "./components/SessionCard.vue";
 import { useRouter } from "vue-router";
 import AlertDialog from "../../components/AlertDialog.vue";
-import { Wallet } from "@lucide/vue";
+import { Minus, Plus, PlusCircle, Trash, Wallet } from "@lucide/vue";
 
 dayjs.extend(utc);
 
@@ -18,45 +18,10 @@ const props = defineProps({
 });
 const router = useRouter();
 
-const paymentMethod = ref("tunai");
+const paymentMethod = ref("cash");
 const showQrisModal = ref(false);
-const qrisUrl = ref("");
+const qrisUrl = ref<string>("");
 const isLoadingQris = ref(false);
-
-const handlePayment = async () => {
-  if (paymentMethod.value === "qris") {
-    try {
-      isLoadingQris.value = true;
-      const response = await Axios.post(
-        `http://localhost:8080/transaction/generate-qris/${transactionId.value}`,
-      );
-
-      const redirectUrl = response.data.data?.redirect_url;
-
-      if (!redirectUrl) {
-        throw new Error("Snap URL tidak ditemukan");
-      }
-
-      qrisUrl.value = redirectUrl;
-      showQrisModal.value = true;
-    } catch (err) {
-      showToast("Gagal membuat QRIS. Silakan coba lagi.");
-      console.error(err);
-    } finally {
-      isLoadingQris.value = false;
-    }
-  } else {
-    // Logic bayar tunai biasa
-    const response = await Axios.post(
-      `${import.meta.env.VITE_API_URL}/transaction/proceed-payment/${transactionId.value}`,
-      {
-        payment_method: paymentMethod.value,
-      },
-    );
-
-    console.log(response);
-  }
-};
 
 // ================= Data Sesi =================
 const transactionId = ref<number>(0);
@@ -72,10 +37,17 @@ interface FnbItem {
   id: number;
   name: string;
   price: number;
+}
+
+interface OrderedFnbItem {
+  id: number; // order id
+  fnb_item_id: number;
+  name: string;
+  price: number;
   qty: number;
 }
 
-const fnbItems = ref<FnbItem[]>([]);
+const fnbItems = ref<OrderedFnbItem[]>([]);
 const sidebarStatus = ref<boolean>(false);
 
 // ================= Sidebar & Toast =================
@@ -90,20 +62,63 @@ function showToast(message: string) {
   }, 2200);
 }
 
-function incrementQty(item: FnbItem) {
-  item.qty += 1;
+async function incrementQty(item: OrderedFnbItem) {
+  try {
+    await Axios.get(
+      `${import.meta.env.VITE_API_URL}/transaction/change-fnb-qty/${item.id}/increase`,
+    );
+    item.qty += 1;
+  } catch (err) {}
 }
 
-function decrementQty(item: FnbItem) {
+async function decrementQty(item: OrderedFnbItem) {
   if (item.qty <= 1) {
     removeFnbItem(item.id);
     return;
   }
+  await Axios.get(
+    `${import.meta.env.VITE_API_URL}/transaction/change-fnb-qty/${item.id}/decrease`,
+  );
   item.qty -= 1;
 }
 
-function removeFnbItem(id: number) {
+const pickFnbItem = async (catalogItem: FnbItem) => {
+  try {
+    const response = await Axios.post(
+      `${import.meta.env.VITE_API_URL}/transaction/pick-new-fnb`,
+      {
+        transaction_id: transactionId.value,
+        fnb_id: catalogItem.id,
+      },
+    );
+
+    const existing = fnbItems.value.find(
+      (i) => i.fnb_item_id === catalogItem.id,
+    );
+    if (existing) {
+      existing.qty += 1;
+    } else {
+      fnbItems.value.push({
+        ...catalogItem,
+        id: response.data.newFnbTransaction.id,
+        fnb_item_id: catalogItem.id,
+        qty: 1,
+      });
+      console.log(fnbItems.value);
+    }
+
+    showToast(`${catalogItem.name} ditambahkan`);
+  } catch (err) {}
+
+  setTimeout(() => (sidebarStatus.value = false), 250);
+};
+
+async function removeFnbItem(id: number) {
   fnbItems.value = fnbItems.value.filter((i) => i.id !== id);
+  console.log(id);
+  await Axios.get(
+    `${import.meta.env.VITE_API_URL}/transaction/remove-fnb/${id}`,
+  );
 }
 
 // ================= Format & Perhitungan =================
@@ -147,7 +162,8 @@ onMounted(async () => {
     const transactionFnb = response.data.transactionItemFnbs;
     transactionFnb.forEach((item: any) => {
       fnbItems.value.push({
-        id: item.fnb_item.id,
+        id: item.id,
+        fnb_item_id: item.fnb_item.id,
         name: item.fnb_item.title,
         price: item.fnb_item.price,
         qty: item.quantity,
@@ -164,16 +180,39 @@ onUnmounted(() => {
   clearTimeout(toastTimeout);
 });
 
-const pickFnbItem = (catalogItem: FnbItem) => {
-  const existing = fnbItems.value.find((i) => i.id === catalogItem.id);
-  if (existing) {
-    existing.qty += 1;
-  } else {
-    fnbItems.value.push({ ...catalogItem, qty: 1 });
-  }
-  showToast(`${catalogItem.name} ditambahkan`);
+const handlePayment = async () => {
+  if (paymentMethod.value === "qris") {
+    try {
+      isLoadingQris.value = true;
+      const response = await Axios.post(
+        `http://localhost:8080/transaction/generate-qris/${transactionId.value}`,
+      );
 
-  setTimeout(() => (sidebarStatus.value = false), 250);
+      const redirectUrl = response.data.data.redirect_url;
+
+      if (!redirectUrl) {
+        throw new Error("Snap URL tidak ditemukan");
+      }
+
+      qrisUrl.value = redirectUrl;
+      showQrisModal.value = true;
+    } catch (err) {
+      showToast("Gagal membuat QRIS. Silakan coba lagi.");
+      console.error(err);
+    } finally {
+      isLoadingQris.value = false;
+    }
+  } else {
+    // Logic bayar tunai biasa
+    const response = await Axios.post(
+      `${import.meta.env.VITE_API_URL}/transaction/proceed-payment/${transactionId.value}`,
+      {
+        payment_method: paymentMethod.value,
+      },
+    );
+
+    console.log(response);
+  }
 };
 </script>
 
@@ -239,7 +278,7 @@ const pickFnbItem = (catalogItem: FnbItem) => {
                 />
               </svg>
               <h3 class="font-display font-semibold text-[15px] text-gray-900">
-                FnB &amp; Tagihan
+                Makanan & Minuman
               </h3>
             </div>
 
@@ -278,17 +317,9 @@ const pickFnbItem = (catalogItem: FnbItem) => {
                     <div class="flex items-center gap-1.5 shrink-0">
                       <button
                         @click="decrementQty(item)"
-                        class="w-6 h-6 flex items-center justify-center rounded-md bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 active:scale-95 transition-all"
+                        class="w-6 h-6 flex items-center justify-center rounded-md bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 active:scale-95 transition-all cursor-pointer"
                       >
-                        <svg
-                          class="w-3 h-3"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          stroke-width="3"
-                        >
-                          <path stroke-linecap="round" d="M5 12h14" />
-                        </svg>
+                        <Minus :size="15" />
                       </button>
                       <span
                         class="w-5 text-center text-sm font-semibold text-gray-800 tabular-nums"
@@ -296,17 +327,9 @@ const pickFnbItem = (catalogItem: FnbItem) => {
                       >
                       <button
                         @click="incrementQty(item)"
-                        class="w-6 h-6 flex items-center justify-center rounded-md bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 active:scale-95 transition-all"
+                        class="w-6 h-6 flex items-center justify-center rounded-md bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 active:scale-95 transition-all cursor-pointer"
                       >
-                        <svg
-                          class="w-3 h-3"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          stroke-width="3"
-                        >
-                          <path stroke-linecap="round" d="M12 5v14M5 12h14" />
-                        </svg>
+                        <Plus :size="15" />
                       </button>
                     </div>
 
@@ -318,21 +341,9 @@ const pickFnbItem = (catalogItem: FnbItem) => {
 
                     <button
                       @click="removeFnbItem(item.id)"
-                      class="text-gray-300 hover:text-red-500 transition-colors shrink-0"
+                      class="text-white p-2 bg-red-300 rounded-full hover:bg-red-400 transition-colors shrink-0 cursor-pointer"
                     >
-                      <svg
-                        class="w-4 h-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          d="M6 7h12M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2m2 0v13a2 2 0 01-2 2H8a2 2 0 01-2-2V7h12z"
-                        />
-                      </svg>
+                      <Trash :size="13" />
                     </button>
                   </div>
                 </TransitionGroup>
@@ -340,21 +351,9 @@ const pickFnbItem = (catalogItem: FnbItem) => {
 
               <button
                 @click="sidebarStatus = true"
-                class="w-full flex items-center justify-center gap-1.5 h-10 rounded-xl border border-dashed border-gray-300 text-gray-500 text-sm font-medium hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/40 transition-all"
+                class="w-full flex items-center justify-center gap-1.5 h-10 rounded-xl border border-dashed border-gray-300 text-gray-500 text-sm font-medium hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/40 active:bg-indigo-200 transition-all cursor-pointer"
               >
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
+                <PlusCircle :size="18" />
                 Tambah Item FnB
               </button>
 
@@ -461,7 +460,11 @@ const pickFnbItem = (catalogItem: FnbItem) => {
                 :class="isLoadingQris ? 'opacity-70 cursor-not-allowed' : ''"
               >
                 <Wallet class="text-white" :size="16" />
-                {{ isLoadingQris ? "Memuat QRIS..." : "Selesaikan & Bayar" }}
+                {{
+                  isLoadingQris
+                    ? "Sedang Membuat QRIS..."
+                    : "Selesaikan & Bayar"
+                }}
               </button>
             </div>
           </div>
@@ -480,22 +483,8 @@ const pickFnbItem = (catalogItem: FnbItem) => {
                     class="w-12 h-1 bg-gray-200 rounded-full mb-4 sm:hidden"
                   ></div>
 
-                  <div class="flex items-center gap-2 mb-1">
-                    <span
-                      class="text-xs font-black tracking-wider text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded"
-                      >QRIS</span
-                    >
-                    <h4 class="font-semibold text-gray-900 text-base">
-                      Halaman Pembayaran QRIS
-                    </h4>
-                  </div>
-
-                  <p class="text-xs text-gray-500 mb-5">
-                    Jika halaman tidak tampil di dalam modal, buka tautan di bawah ini.
-                  </p>
-
                   <div
-                    class="w-full h-[70vh] bg-gray-50 rounded-2xl border border-gray-200 overflow-hidden mb-4"
+                    class="w-full h-[65vh] bg-gray-50 rounded-2xl border border-gray-200 overflow-hidden mb-4"
                   >
                     <iframe
                       :src="qrisUrl"
@@ -504,25 +493,9 @@ const pickFnbItem = (catalogItem: FnbItem) => {
                     ></iframe>
                   </div>
 
-                  <a
-                    :href="qrisUrl"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="w-full inline-flex items-center justify-center h-11 rounded-xl bg-indigo-600 text-white text-sm font-semibold shadow-md shadow-indigo-200 active:scale-[0.98] transition-all mb-3"
-                  >
-                    Buka di tab baru
-                  </a>
-
-                  <p class="text-xs text-gray-500 mb-5">
-                    Total yang harus dibayar:
-                    <span class="font-semibold text-indigo-600">{{
-                      formatRupiah(grandTotal)
-                    }}</span>
-                  </p>
-
                   <button
                     @click="showQrisModal = false"
-                    class="w-full h-11 rounded-xl border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 active:scale-[0.98] transition-all"
+                    class="w-full h-11 rounded-xl border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer"
                   >
                     Tutup
                   </button>
