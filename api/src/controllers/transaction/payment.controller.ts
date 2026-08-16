@@ -1,5 +1,5 @@
 import { type Request, type Response } from "express";
-import { prisma } from "../lib/prisma.js";
+import { prisma } from "../../lib/prisma.js";
 import midtransClient from "midtrans-client";
 
 const snap = new midtransClient.Snap({

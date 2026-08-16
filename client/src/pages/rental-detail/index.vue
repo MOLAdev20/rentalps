@@ -62,11 +62,15 @@ function showToast(message: string) {
   }, 2200);
 }
 
+const modifyFnbQty = async (orderId: number, type: "increase" | "decrease") => {
+  await Axios.patch(
+    `${import.meta.env.VITE_API_URL}/transaction/fnb-item/change-qty/${orderId}/${type}`,
+  );
+};
+
 async function incrementQty(item: OrderedFnbItem) {
   try {
-    await Axios.get(
-      `${import.meta.env.VITE_API_URL}/transaction/change-fnb-qty/${item.id}/increase`,
-    );
+    await modifyFnbQty(item.id, "increase");
     item.qty += 1;
   } catch (err) {}
 }
@@ -76,16 +80,14 @@ async function decrementQty(item: OrderedFnbItem) {
     removeFnbItem(item.id);
     return;
   }
-  await Axios.get(
-    `${import.meta.env.VITE_API_URL}/transaction/change-fnb-qty/${item.id}/decrease`,
-  );
+  await modifyFnbQty(item.id, "increase");
   item.qty -= 1;
 }
 
 const pickFnbItem = async (catalogItem: FnbItem) => {
   try {
     const response = await Axios.post(
-      `${import.meta.env.VITE_API_URL}/transaction/pick-new-fnb`,
+      `${import.meta.env.VITE_API_URL}/transaction/fnb-item/add`,
       {
         transaction_id: transactionId.value,
         fnb_id: catalogItem.id,
@@ -116,8 +118,8 @@ const pickFnbItem = async (catalogItem: FnbItem) => {
 async function removeFnbItem(id: number) {
   fnbItems.value = fnbItems.value.filter((i) => i.id !== id);
   console.log(id);
-  await Axios.get(
-    `${import.meta.env.VITE_API_URL}/transaction/remove-fnb/${id}`,
+  await Axios.delete(
+    `${import.meta.env.VITE_API_URL}/transaction/fnb-item/${id}`,
   );
 }
 
@@ -145,7 +147,7 @@ const grandTotal = computed(() => unitRentTotal.value + fnbTotal.value);
 onMounted(async () => {
   try {
     const response = await Axios.get(
-      `http://localhost:8080/transaction/${props.id}`,
+      `http://localhost:8080/transaction/unit/${props.id}`,
     );
 
     transactionId.value = response.data.id;

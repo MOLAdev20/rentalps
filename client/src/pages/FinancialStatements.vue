@@ -133,7 +133,7 @@ const fetchFinancialData = async () => {
   loading.value = true;
   try {
     const response = await Axios.get(
-      `${import.meta.env.VITE_API_URL}/transaction/financial-statements`,
+      `${import.meta.env.VITE_API_URL}/transaction/report/financial-statements`,
       {
         params: {
           start_date: startDate.value,
