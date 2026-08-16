@@ -114,7 +114,11 @@ function removeFnbItem(item: FnBItem) {
   selectedFnBItems.value = selectedFnBItems.value.filter((i) => i !== item);
 }
 
-const pickFnbItem = (catalogItem: FnBItem) => {
+const pickFnbItem = (catalogItem: {
+  id: number;
+  name: string;
+  price: number;
+}) => {
   const existing = selectedFnBItems.value.find((i) => i.id === catalogItem.id);
   if (existing) {
     existing.qty += 1;

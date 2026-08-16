@@ -66,7 +66,6 @@ onMounted(async () => {
         total: item.total,
         created_at: item.created_at,
         unit_ps: item.units[0].title,
-        // TODO: sesuaikan nama field-field di bawah ini dengan response API asli kamu
         payment_method: "cash",
         status: "selesai",
         rent_price_per_hour: item.units[0].rent_price ?? 0,
