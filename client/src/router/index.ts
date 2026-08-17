@@ -3,7 +3,7 @@ import Dashboard from "../pages/Dashboard.vue";
 import RentalManagement from "../pages/RentalManagement.vue";
 import UnitManagement from "../pages/UnitManagement.vue";
 import RentailDetail from "../pages/rental-detail/index.vue";
-import NewRental from "../pages/NewRental.vue";
+import NewRental from "../pages/new-rental/NewRental.vue";
 import NotFound from "../pages/NotFound.vue";
 import TransactionReport from "../pages/TransactionReport.vue";
 import FinancialStatements from "../pages/FinancialStatements.vue";

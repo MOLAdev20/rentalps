@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from "vue";
 import Axios from "axios";
 import { CircleX, PlusCircleIcon, Search, Utensils } from "@lucide/vue";
+import { formatRupiah } from "../../../helper";
 
 type Item = {
   id: number;
@@ -49,10 +50,6 @@ const filteredFnbItems = computed(() => {
   if (!q) return fnbItems.value;
   return fnbItems.value.filter((item) => item.name.toLowerCase().includes(q));
 });
-
-const pickFnbItem = (item: Item) => {
-  emit("pickFnbItem", item);
-};
 </script>
 <template>
   <Teleport to="body">
@@ -116,7 +113,7 @@ const pickFnbItem = (item: Item) => {
           <button
             v-for="item in filteredFnbItems"
             :key="item.id"
-            @click="pickFnbItem(item)"
+            @click="emit('pickFnbItem', item)"
             class="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl hover:bg-indigo-50 active:scale-[0.98] transition-all text-left cursor-pointer"
           >
             <div
@@ -129,7 +126,7 @@ const pickFnbItem = (item: Item) => {
                 {{ item.name }}
               </p>
               <p class="text-xs text-gray-400">
-                {{ item.price }}
+                {{ formatRupiah(item.price) }}
               </p>
             </div>
             <PlusCircleIcon :size="20" class="text-gray-500" />

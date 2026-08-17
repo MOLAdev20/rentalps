@@ -10,6 +10,7 @@ import SessionCard from "./components/SessionCard.vue";
 import { useRouter } from "vue-router";
 import AlertDialog from "../../components/AlertDialog.vue";
 import { Minus, Plus, PlusCircle, Trash, Wallet } from "@lucide/vue";
+import { formatRupiah } from "../../helper/index.ts";
 
 dayjs.extend(utc);
 
@@ -124,15 +125,6 @@ async function removeFnbItem(id: number) {
 }
 
 // ================= Format & Perhitungan =================
-const formatRupiah = (angka: number): string => {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(angka);
-};
-
 const unitRentTotal = computed(
   () => rentPricePerHour.value * playDuration.value,
 );
@@ -145,6 +137,8 @@ const grandTotal = computed(() => unitRentTotal.value + fnbTotal.value);
 
 // ================= Lifecycle =================
 onMounted(async () => {
+  document.title = "Detail sewa | Reno Rental";
+
   try {
     const response = await Axios.get(
       `http://localhost:8080/transaction/unit/${props.id}`,
