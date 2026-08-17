@@ -9,7 +9,14 @@ import FnbItemSidebar from "./components/FnbItemSidebar.vue";
 import SessionCard from "./components/SessionCard.vue";
 import { useRouter } from "vue-router";
 import AlertDialog from "../../components/AlertDialog.vue";
-import { Minus, Plus, PlusCircle, Trash, Wallet } from "@lucide/vue";
+import {
+  Minus,
+  Plus,
+  PlusCircle,
+  SquareChevronRight,
+  Trash,
+  Wallet,
+} from "@lucide/vue";
 import { formatRupiah } from "../../helper/index.ts";
 
 dayjs.extend(utc);
@@ -20,6 +27,11 @@ const props = defineProps({
 const router = useRouter();
 
 const paymentMethod = ref("cash");
+const paymentLink = ref<{ url: string; expired_at: string; status: string }>({
+  url: "",
+  expired_at: "",
+  status: "",
+});
 const showQrisModal = ref(false);
 const qrisUrl = ref<string>("");
 const isLoadingQris = ref(false);
@@ -144,12 +156,20 @@ onMounted(async () => {
       `http://localhost:8080/transaction/unit/${props.id}`,
     );
 
+    console.log(response);
+
     transactionId.value = response.data.id;
-    console.log(transactionId.value);
     customerName.value = response.data.customer_name;
     rentedUnit.value = response.data.transactionItemUnits[0].unit_item.title;
     rawStartTime.value = response.data.transactionItemUnits[0].start_time;
     rawEndTime.value = response.data.transactionItemUnits[0].end_time;
+    paymentMethod.value = response.data.payment_method;
+
+    if (paymentMethod.value === "qris") {
+      paymentLink.value = response.data.paymentLink[0];
+
+      qrisUrl.value = paymentLink.value.url;
+    }
 
     playDuration.value = response.data.transactionItemUnits[0].play_time;
     rentPricePerHour.value =
@@ -181,10 +201,13 @@ const handlePayment = async () => {
     try {
       isLoadingQris.value = true;
       const response = await Axios.post(
-        `http://localhost:8080/transaction/generate-qris/${transactionId.value}`,
+        `http://localhost:8080/transaction/payment/generate-qris`,
+        {
+          transaction_id: transactionId.value,
+        },
       );
 
-      const redirectUrl = response.data.data.redirect_url;
+      const redirectUrl = response.data.url;
 
       if (!redirectUrl) {
         throw new Error("Snap URL tidak ditemukan");
@@ -378,90 +401,107 @@ const handlePayment = async () => {
               </div>
 
               <!-- Pilihan Metode Pembayaran (Di atas tombol Selesaikan & Bayar) -->
-              <div class="mt-5 pt-4 border-t border-gray-100">
-                <p class="text-xs font-medium text-gray-500 mb-2.5">
-                  Metode Pembayaran
-                </p>
-                <div class="grid grid-cols-2 gap-2.5">
-                  <!-- Tunai -->
-                  <label
-                    class="flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all"
-                    :class="
-                      paymentMethod === 'cash'
-                        ? 'border-indigo-600 bg-indigo-50/30 ring-1 ring-indigo-600'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
-                    "
-                  >
-                    <div class="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        v-model="paymentMethod"
-                        value="cash"
-                        class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
-                      />
-                      <span class="text-sm font-medium text-gray-800"
-                        >Tunai/Cash</span
-                      >
-                    </div>
-                    <svg
-                      class="w-5 h-5 text-gray-500"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      stroke-width="1.8"
+              <div v-if="paymentLink.url == ''">
+                <div class="mt-5 pt-4 border-t border-gray-100">
+                  <p class="text-xs font-medium text-gray-500 mb-2.5">
+                    Metode Pembayaran
+                  </p>
+                  <div class="grid grid-cols-2 gap-2.5">
+                    <!-- Tunai -->
+                    <label
+                      class="flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all"
+                      :class="
+                        paymentMethod === 'cash'
+                          ? 'border-indigo-600 bg-indigo-50/30 ring-1 ring-indigo-600'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      "
                     >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
-                      />
-                    </svg>
-                  </label>
+                      <div class="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          v-model="paymentMethod"
+                          value="cash"
+                          class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                        />
+                        <span class="text-sm font-medium text-gray-800"
+                          >Tunai/Cash</span
+                        >
+                      </div>
+                      <svg
+                        class="w-5 h-5 text-gray-500"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+                        />
+                      </svg>
+                    </label>
 
-                  <!-- QRIS -->
-                  <label
-                    class="flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all"
-                    :class="
-                      paymentMethod === 'qris'
-                        ? 'border-indigo-600 bg-indigo-50/30 ring-1 ring-indigo-600'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
-                    "
-                  >
-                    <div class="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        v-model="paymentMethod"
-                        value="qris"
-                        class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
-                      />
-                      <span class="text-sm font-medium text-gray-800"
-                        >QRIS</span
-                      >
-                    </div>
-                    <!-- Logo QRIS -->
-                    <span
-                      class="text-[10px] font-black tracking-widest text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded leading-none"
+                    <!-- QRIS -->
+                    <label
+                      class="flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all"
+                      :class="
+                        paymentMethod === 'qris'
+                          ? 'border-indigo-600 bg-indigo-50/30 ring-1 ring-indigo-600'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      "
                     >
-                      QRIS
-                    </span>
-                  </label>
+                      <div class="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          v-model="paymentMethod"
+                          value="qris"
+                          class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                        />
+                        <span class="text-sm font-medium text-gray-800"
+                          >QRIS</span
+                        >
+                      </div>
+                      <!-- Logo QRIS -->
+                      <span
+                        class="text-[10px] font-black tracking-widest text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded leading-none"
+                      >
+                        QRIS
+                      </span>
+                    </label>
+                  </div>
                 </div>
-              </div>
 
-              <!-- Tombol Selesaikan & Bayar -->
-              <button
-                @click="handlePayment"
-                :disabled="isLoadingQris"
-                class="mt-4 w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-indigo-600 text-white text-sm font-semibold shadow-md shadow-indigo-200 active:scale-[0.98] transition-all cursor-pointer"
-                :class="isLoadingQris ? 'opacity-70 cursor-not-allowed' : ''"
-              >
-                <Wallet class="text-white" :size="16" />
-                {{
-                  isLoadingQris
-                    ? "Sedang Membuat QRIS..."
-                    : "Selesaikan & Bayar"
-                }}
-              </button>
+                <!-- Tombol Selesaikan & Bayar -->
+                <button
+                  @click="handlePayment"
+                  :disabled="isLoadingQris"
+                  class="mt-4 w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-indigo-600 text-white text-sm font-semibold shadow-md shadow-indigo-200 active:scale-[0.98] transition-all cursor-pointer"
+                  :class="isLoadingQris ? 'opacity-70 cursor-not-allowed' : ''"
+                >
+                  <Wallet class="text-white" :size="16" />
+                  {{
+                    isLoadingQris
+                      ? "Sedang Membuat QRIS..."
+                      : "Selesaikan & Bayar"
+                  }}
+                </button>
+              </div>
+              <div v-else>
+                <!-- Tombol Selesaikan & Bayar -->
+                <button
+                  @click="showQrisModal = true"
+                  :disabled="isLoadingQris"
+                  class="mt-4 w-full flex items-center justify-center gap-1 h-11 rounded-xl bg-yellow-600 text-white text-sm font-semibold shadow-md shadow-indigo-200 active:scale-[0.98] transition-all cursor-pointer"
+                  :class="isLoadingQris ? 'opacity-70 cursor-not-allowed' : ''"
+                >
+                  Lanjutkan Pembayaran
+                  <SquareChevronRight class="text-white" :size="18" />
+                </button>
+                <button class="mt-3 text-sm text-indigo-500">
+                  Ubah Metode Pembayaran
+                </button>
+              </div>
             </div>
           </div>
 

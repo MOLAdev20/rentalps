@@ -8,6 +8,11 @@ const snap = new midtransClient.Snap({
   clientKey: process.env.MIDTRANS_CLIENT_KEY,
 });
 
+interface MidtransSnapResponse {
+  token: string;
+  redirect_url: string;
+}
+
 const endpoint = {
   proceedPayment: async (req: Request, res: Response) => {
     try {
@@ -57,19 +62,45 @@ const endpoint = {
       });
 
       // 2. Request Snap transaction for QRIS only
+      const snapMinutesDuration = 15;
       const parameter = {
         transaction_details: {
           gross_amount: transaction.total,
           order_id: `TRX-${transaction.id}-${Date.now()}`,
         },
         enabled_payments: ["other_qris"],
+        expiry: {
+          unit: "minutes",
+          duration: snapMinutesDuration,
+        },
       };
 
-      const response = await snap.createTransaction(parameter);
+      const snapResponse: MidtransSnapResponse =
+        await snap.createTransaction(parameter);
+
+      const snapExpiredAt = new Date(
+        Date.now() + snapMinutesDuration * 60 * 1000,
+      );
+      const paymentLink = await prisma.payment_Link.create({
+        data: {
+          transaction_id: transaction.id,
+          url: snapResponse.redirect_url,
+          expired_at: snapExpiredAt,
+        },
+      });
+
+      await prisma.transaction.update({
+        where: {
+          id: transaction.id,
+        },
+        data: {
+          payment_method: "qris",
+        },
+      });
 
       res.json({
         message: "qris-generated",
-        data: response,
+        data: paymentLink,
       });
     } catch (err) {
       const midtransError = err as {

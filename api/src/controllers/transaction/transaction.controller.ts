@@ -235,6 +235,17 @@ const endpoint = {
               },
             },
           },
+          paymentLink: {
+            select: {
+              url: true,
+              expired_at: true,
+              status: true,
+            },
+            take: 1,
+            orderBy: {
+              id: "desc",
+            },
+          },
         },
       });
 
