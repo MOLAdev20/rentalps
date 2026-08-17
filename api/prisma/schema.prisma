@@ -30,6 +30,13 @@ enum Transaction_Status {
   cancel
 }
 
+enum Payment_Link_Status {
+  pending
+  complete
+  cancel
+  expired
+}
+
 model Unit_Item {
   id                   Int                     @id @default(autoincrement())
   title                String
@@ -70,6 +77,7 @@ model Transaction {
 
   transactionItemUnits Transaction_Item_Unit[]
   transactionItemFnbs  Transaction_Item_Fnb[]
+  paymentLink Payment_Link[]
 
   @@map("transaction")
 }
@@ -100,4 +108,18 @@ model Transaction_Item_Fnb {
   fnb_item    Fnb_Item    @relation(fields: [fnb_item_id], references: [id], onDelete: Cascade)
 
   @@map("transaction_item_fnb")
+}
+
+model Payment_Link {
+  id Int @id @default(autoincrement())
+  transaction_id Int
+  url String
+  expired_at DateTime @default(now())
+  status Payment_Link_Status @default(pending)
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @default(now())
+
+  transaction Transaction @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
+  
+  @@map("payment_link")
 }
