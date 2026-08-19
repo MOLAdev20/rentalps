@@ -1,4 +1,5 @@
 import { Router } from "express";
+import auth from "./auth.route.js";
 import unit from "./unit.route.js";
 import fnb from "./fnb.route.js";
 import transaction from "./transaction/transaction.route.js";
@@ -8,6 +9,7 @@ import transactionReport from "./transaction/report.route.js";
 
 const route = Router();
 
+route.use("/auth", auth);
 route.use("/unit", unit);
 route.use("/fnb", fnb);
 route.use("/transaction", transaction);

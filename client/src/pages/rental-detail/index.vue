@@ -9,10 +9,12 @@ import FnbItemSidebar from "./components/FnbItemSidebar.vue";
 import SessionCard from "./components/SessionCard.vue";
 import { useRouter } from "vue-router";
 import AlertDialog from "../../components/AlertDialog.vue";
+import { useAlertDialog } from "../../composables/useAlertDialog.ts";
 import {
   Minus,
   Plus,
   PlusCircle,
+  RefreshCcw,
   SquareChevronRight,
   Trash,
   Wallet,
@@ -25,6 +27,7 @@ const props = defineProps({
   id: String,
 });
 const router = useRouter();
+const { confirm } = useAlertDialog();
 
 const paymentMethod = ref("cash");
 const paymentLink = ref<{ url: string; expired_at: string; status: string }>({
@@ -32,6 +35,7 @@ const paymentLink = ref<{ url: string; expired_at: string; status: string }>({
   expired_at: "",
   status: "",
 });
+const paymentSelectionMode = ref<boolean>(true);
 const showQrisModal = ref(false);
 const qrisUrl = ref<string>("");
 const isLoadingQris = ref(false);
@@ -167,8 +171,9 @@ onMounted(async () => {
 
     if (paymentMethod.value === "qris") {
       paymentLink.value = response.data.paymentLink[0];
-
       qrisUrl.value = paymentLink.value.url;
+
+      paymentSelectionMode.value = false;
     }
 
     playDuration.value = response.data.transactionItemUnits[0].play_time;
@@ -215,6 +220,7 @@ const handlePayment = async () => {
 
       qrisUrl.value = redirectUrl;
       showQrisModal.value = true;
+      paymentSelectionMode.value = false;
     } catch (err) {
       showToast("Gagal membuat QRIS. Silakan coba lagi.");
       console.error(err);
@@ -231,6 +237,20 @@ const handlePayment = async () => {
     );
 
     console.log(response);
+  }
+};
+
+const switchPaymentMode = async () => {
+  const isAccept = await confirm({
+    title: "Ganti Metode Pembayaran?",
+    message: "Apakah kamu yakin?",
+    confirmText: "Ya, Ganti",
+    cancelText: "Batal",
+    variant: "warning",
+  });
+
+  if (isAccept) {
+    paymentSelectionMode.value = true;
   }
 };
 </script>
@@ -401,7 +421,7 @@ const handlePayment = async () => {
               </div>
 
               <!-- Pilihan Metode Pembayaran (Di atas tombol Selesaikan & Bayar) -->
-              <div v-if="paymentLink.url == ''">
+              <div v-if="paymentSelectionMode">
                 <div class="mt-5 pt-4 border-t border-gray-100">
                   <p class="text-xs font-medium text-gray-500 mb-2.5">
                     Metode Pembayaran
@@ -498,8 +518,11 @@ const handlePayment = async () => {
                   Lanjutkan Pembayaran
                   <SquareChevronRight class="text-white" :size="18" />
                 </button>
-                <button class="mt-3 text-sm text-indigo-500">
-                  Ubah Metode Pembayaran
+                <button
+                  @click="switchPaymentMode"
+                  class="mt-3 text-sm text-indigo-500 hover:text-indigo-700 flex items-center gap-1 cursor-pointer"
+                >
+                  <RefreshCcw :size="18" /><span>Ganti Metode Pembayaran</span>
                 </button>
               </div>
             </div>
