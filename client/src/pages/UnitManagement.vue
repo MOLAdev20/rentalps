@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import Axios from "axios";
 import toast, { Toaster } from "vue3-hot-toast";
 
 import BaseLayout from "../components/__Layout.vue";
-
-document.title = "Sewa | Reno Rental";
+import { useRouter } from "vue-router";
+import { useAxios } from "../composables/useAxios.ts";
 
 interface Unit {
   id: number;
@@ -25,18 +24,25 @@ const unitData = ref<Unit[]>([]);
 const isModalOpen = ref(false);
 
 onMounted(() => {
+  document.title = "Sewa | Reno Rental";
   fetchData();
 });
 
-const fetchData = async () => {
-  try {
-    const response = await Axios.get(`${import.meta.env.VITE_API_URL}/unit`);
-    unitData.value = response.data.unit;
-  } catch (err: any) {
-    if (err.status == 500) {
-      toast.error("Data gagal dimuat. Harap coba lagi");
-    }
-  }
+const router = useRouter();
+const axios = useAxios();
+
+const fetchData = () => {
+  axios.get(
+    "unit",
+    (response: any) => {
+      unitData.value = response.data.unit;
+    },
+    (err: any) => {
+      if (err.status == 500) {
+        toast.error("Data gagal dimuat. Harap coba lagi");
+      }
+    },
+  );
 };
 
 const saveData = async () => {

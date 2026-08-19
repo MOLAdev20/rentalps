@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import Axios from "axios";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import screen from "../../public/screen.jpeg";
 import { Gamepad2, User, Lock, Eye, EyeOff, LoaderCircle } from "@lucide/vue";
 import { onMounted } from "vue";
 
 const router = useRouter();
+const route = useRoute();
 
 const username = ref<string>("");
 const password = ref<string>("");
@@ -17,6 +18,12 @@ const errorMessage = ref<string>("");
 
 onMounted(() => {
   document.title = "Login | Reno Rental";
+
+  if (route.query.message) {
+    const message: string = String(route.query.message);
+    errorMessage.value = message;
+    router.replace({ query: {} });
+  }
 });
 
 async function handleLogin() {
@@ -34,7 +41,7 @@ async function handleLogin() {
       username: username.value,
       password: password.value,
     });
-    localStorage.setItem("token", response.data.token);
+    localStorage.setItem("token", `Bearer ${response.data.token}`);
 
     router.replace("/dashboard");
   } catch (err: any) {

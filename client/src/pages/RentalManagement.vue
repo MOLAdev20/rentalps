@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import BaseLayout from "../components/__Layout.vue";
 import UnitCard from "../components/UnitCard.vue";
-import Axios from "axios";
 
 import { onMounted, ref } from "vue";
+import { useAxios } from "../composables/useAxios.ts";
 
 const formatRupiah = (angka: number): string => {
   return new Intl.NumberFormat("id-ID", {
@@ -21,24 +21,26 @@ interface Unit {
 }
 
 const unitData = ref<Unit[]>([]);
+const axios = useAxios();
 
-onMounted(async () => {
+onMounted(() => {
   document.title = "Sewa | Reno Rental";
-
-  const response = await Axios.get(`${import.meta.env.VITE_API_URL}/unit`);
-
-  if (response.data.length == 0) {
-    console.log("Data Unit tidak ada");
-  }
-
-  response.data.unit.forEach((el: any) => {
-    unitData.value.push({
-      id: el.id,
-      title: el.title,
-      rent_price: formatRupiah(el.rent_price),
-      status: el.status,
-    });
-  });
+  axios.get(
+    "unit",
+    (response: any) => {
+      response.data.unit.forEach((el: any) => {
+        unitData.value.push({
+          id: el.id,
+          title: el.title,
+          rent_price: formatRupiah(el.rent_price),
+          status: el.status,
+        });
+      });
+    },
+    (err: any) => {
+      console.log(err);
+    },
+  );
 });
 </script>
 

@@ -7,7 +7,6 @@ import {
   computed,
   nextTick,
 } from "vue";
-import Axios from "axios";
 import toast from "vue3-hot-toast";
 import BaseLayout from "../components/__Layout.vue";
 import Chart from "chart.js/auto";
@@ -24,6 +23,9 @@ import {
   Check,
 } from "@lucide/vue";
 import dayjs from "dayjs";
+import { useAxios } from "../composables/useAxios.ts";
+
+const axios = useAxios();
 
 // ================= Formatter =================
 const currencyFormat = (value: number) =>
@@ -131,44 +133,43 @@ const isEmpty = ref<boolean>(false);
 const fetchFinancialData = async () => {
   recapitulationData.value = [];
   loading.value = true;
-  try {
-    const response = await Axios.get(
-      `${import.meta.env.VITE_API_URL}/transaction/report/financial-statements`,
-      {
-        params: {
-          start_date: startDate.value,
-          end_date: endDate.value,
-        },
-      },
-    );
 
-    const resData = response.data;
+  axios.getWithParams(
+    "transaction/report/financial-statements",
+    {
+      start_date: startDate.value,
+      end_date: endDate.value,
+    },
+    (response: any) => {
+      const resData = response.data;
 
-    if (resData.summary.totalTransaction === 0) {
-      isEmpty.value = true;
-    } else {
-      isEmpty.value = false;
-      summary.value = resData.summary;
-      resData.recapitulation.map((item: any) => {
-        recapitulationData.value.push({
-          date: dayjs(item.date).format("DD-MM-YYYY").toString(),
-          trx: item.trx,
-          rental: item.rental,
-          fnb: item.fnb,
-          cash: item.cash,
-          qris: item.qris,
-          total: item.total,
+      if (resData.summary.totalTransaction === 0) {
+        isEmpty.value = true;
+      } else {
+        isEmpty.value = false;
+        summary.value = resData.summary;
+        resData.recapitulation.map((item: any) => {
+          recapitulationData.value.push({
+            date: dayjs(item.date).format("DD-MM-YYYY").toString(),
+            trx: item.trx,
+            rental: item.rental,
+            fnb: item.fnb,
+            cash: item.cash,
+            qris: item.qris,
+            total: item.total,
+          });
         });
-      });
 
-      await nextTick();
-      renderCharts();
-    }
-  } catch (err) {
-    toast.error("Gagal memuat data laporan keuangan.");
-  } finally {
-    loading.value = false;
-  }
+        nextTick();
+        renderCharts();
+      }
+    },
+    (err: any) => {
+      toast.error("Gagal memuat data laporan keuangan.");
+    },
+  );
+
+  loading.value = false;
 };
 
 const renderCharts = () => {
