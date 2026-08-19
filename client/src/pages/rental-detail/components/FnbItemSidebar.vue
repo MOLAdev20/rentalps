@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import Axios from "axios";
+import { useAxios } from "../../../composables/useAxios";
 import { CircleX, PlusCircleIcon, Search, Utensils } from "@lucide/vue";
 import { formatRupiah } from "../../../helper";
 
@@ -21,10 +21,10 @@ const emit = defineEmits<{
   pickFnbItem: [Item: Item];
 }>();
 
-onMounted(async () => {
-  try {
-    const response = await Axios.get("http://localhost:8080/fnb");
+const axios = useAxios();
 
+onMounted(async () => {
+  axios.get("fnb", (response: any) => {
     const responseItems = response.data.fnb;
 
     if (responseItems.length > 0) {
@@ -36,9 +36,7 @@ onMounted(async () => {
         });
       });
     }
-  } catch (err) {
-    console.log(err);
-  }
+  });
 });
 
 const closeSidebar = () => {

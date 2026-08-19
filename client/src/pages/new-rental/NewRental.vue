@@ -5,12 +5,12 @@ import FnbItemSidebar from "../rental-detail/components/FnbItemSidebar.vue";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { PlayCircle, PlusCircleIcon, Trash } from "@lucide/vue";
-import Axios from "axios";
 import { useRouter } from "vue-router";
 import AlertDialog from "../../components/AlertDialog.vue";
 import { useAlertDialog } from "../../composables/useAlertDialog.ts";
 import { formatRupiah } from "../../helper/currency.ts";
 import SessionCard from "./components/SessionCard.vue";
+import { useAxios } from "../../composables/useAxios.ts";
 
 const props = defineProps<{
   unitId: String;
@@ -24,6 +24,7 @@ interface FnBItem {
 }
 
 const router = useRouter();
+const axios = useAxios();
 const sidebarStatus = ref(false);
 const unitTitle = ref<string>();
 const unitRentPrice = ref<number>(0);
@@ -39,23 +40,21 @@ const { alert, confirm } = useAlertDialog();
 
 let tick = 0;
 onMounted(async () => {
-  try {
-    const data = await Axios.get(
-      `${import.meta.env.VITE_API_URL}/unit/available/${props.unitId}`,
-    );
+  axios.get(
+    `unit/available/${props.unitId}`,
+    (response: any) => {
+      unitTitle.value = response.data.title;
+      unitRentPrice.value = response.data.rent_price;
 
-    document.title = "Sewa Baru | Reno Rental";
-
-    unitTitle.value = data.data.title;
-    unitRentPrice.value = data.data.rent_price;
-
-    tick = setInterval(() => {
-      currentTime.value = dayjs().format("HH:mm:ss");
-      todaysFormattedDate.value = dayjs().locale("id").format("DD MMMM YYYY");
-    }, 1000);
-  } catch (err) {
-    router.replace({ name: "NotFound" });
-  }
+      tick = setInterval(() => {
+        currentTime.value = dayjs().format("HH:mm:ss");
+        todaysFormattedDate.value = dayjs().locale("id").format("DD MMMM YYYY");
+      }, 1000);
+    },
+    () => {
+      router.replace({ name: "NotFound" });
+    },
+  );
 });
 
 onUnmounted(() => {
@@ -133,47 +132,46 @@ const proceedPayment = async () => {
   });
 
   if (askProceed) {
-    try {
-      dayjs.extend(utc);
+    dayjs.extend(utc);
 
-      let transactionFnb = selectedFnBItems.value.map((item) => ({
-        fnb_item: item.id,
-        quantity: item.qty,
-      }));
+    let transactionFnb = selectedFnBItems.value.map((item) => ({
+      fnb_item: item.id,
+      quantity: item.qty,
+    }));
 
-      const endTime = dayjs().add(playDuration.value, "hour").utc().format();
+    const endTime = dayjs().add(playDuration.value, "hour").utc().format();
 
-      const payload = {
-        customer_name: customerName.value,
-        transaction_rental: [
-          {
-            unit_item: Number(props.unitId),
-            play_time: playDuration.value,
-            start_time: dayjs().utc().format(),
-            end_time: endTime,
-          },
-        ],
-        transaction_fnb: transactionFnb,
-      };
+    const payload = {
+      customer_name: customerName.value,
+      transaction_rental: [
+        {
+          unit_item: Number(props.unitId),
+          play_time: playDuration.value,
+          start_time: dayjs().utc().format(),
+          end_time: endTime,
+        },
+      ],
+      transaction_fnb: transactionFnb,
+    };
 
-      console.log(payload);
-
-      const response = await Axios.post(
-        "http://localhost:8080/transaction",
-        payload,
-      );
-      if (response.status === 200)
-        router.replace({
-          name: "rent-detail",
-          params: { id: String(props.unitId) },
+    axios.post(
+      "transaction",
+      payload,
+      (response: any) => {
+        if (response.status === 200)
+          router.replace({
+            name: "rent-detail",
+            params: { id: String(props.unitId) },
+          });
+      },
+      () => {
+        return alert({
+          title: "Terjadi Kesalahan",
+          message: "Harap coba lagi",
+          variant: "danger",
         });
-    } catch (err) {
-      return await alert({
-        title: "Terjadi Kesalahan",
-        message: "Harap coba lagi",
-        variant: "danger",
-      });
-    }
+      },
+    );
   }
 };
 </script>

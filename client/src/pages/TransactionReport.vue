@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, computed } from "vue";
-import Axios from "axios";
 import toast, { Toaster } from "vue3-hot-toast";
-
+import { useAxios } from "../composables/useAxios.ts";
 import BaseLayout from "../components/__Layout.vue";
 import {
   EllipsisVertical,
@@ -21,6 +20,7 @@ import dayjs from "dayjs";
 import { useAlertDialog } from "../composables/useAlertDialog";
 
 const { confirm } = useAlertDialog();
+const axios = useAxios();
 
 interface FnbOrderItem {
   id: number;
@@ -49,42 +49,40 @@ interface TransactionLogs {
 
 const transactionData = ref<TransactionLogs[]>([]);
 
-onMounted(async () => {
+onMounted(() => {
   document.title = "Laporan Transaksi | Reno Rental";
 
-  try {
-    const response = await Axios.get(
-      `${import.meta.env.VITE_API_URL}/transaction`,
-    )!;
-
-    response.data.map((item: any) => {
-      transactionData.value.push({
-        id: item.id,
-        transaction_no: item.transaction_no,
-        customer_name: item.customer_name,
-        playDuration: item.units[0].play_time,
-        total: item.total,
-        created_at: item.created_at,
-        unit_ps: item.units[0].title,
-        payment_method: "cash",
-        status: "selesai",
-        rent_price_per_hour: item.units[0].rent_price ?? 0,
-        start_time: item.units[0].start_time ?? item.created_at,
-        end_time: item.units[0].end_time ?? item.created_at,
-        fnb_items: item.fnbs.map((fnb: any) => ({
-          id: fnb.id,
-          title: fnb.title,
-          price: fnb.price,
-          qty: fnb.quantity,
-          subTotal: fnb.sub_total,
-        })),
+  axios.get(
+    "transaction",
+    (response: any) => {
+      response.data.map((item: any) => {
+        transactionData.value.push({
+          id: item.id,
+          transaction_no: item.transaction_no,
+          customer_name: item.customer_name,
+          playDuration: item.units[0].play_time,
+          total: item.total,
+          created_at: item.created_at,
+          unit_ps: item.units[0].title,
+          payment_method: "cash",
+          status: "selesai",
+          rent_price_per_hour: item.units[0].rent_price ?? 0,
+          start_time: item.units[0].start_time ?? item.created_at,
+          end_time: item.units[0].end_time ?? item.created_at,
+          fnb_items: item.fnbs.map((fnb: any) => ({
+            id: fnb.id,
+            title: fnb.title,
+            price: fnb.price,
+            qty: fnb.quantity,
+            subTotal: fnb.sub_total,
+          })),
+        });
       });
-    });
-
-    console.log(transactionData.value);
-  } catch (err) {
-    toast.error("Data gagal dimuat. Harap coba lagi");
-  }
+    },
+    (err: any) => {
+      toast.error("Data gagal dimuat. Harap coba lagi");
+    },
+  );
 });
 
 const currencyFormat = (value: number) =>
@@ -195,7 +193,6 @@ async function hapusTransaksi(transaction: TransactionLogs) {
 
   try {
     // TODO: sesuaikan endpoint hapus transaksi
-    await Axios.delete(`http://localhost:8080/transaction/${transaction.id}`);
     transactionData.value = transactionData.value.filter(
       (t) => t.id !== transaction.id,
     );

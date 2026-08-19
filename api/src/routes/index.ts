@@ -1,4 +1,5 @@
 import { Router } from "express";
+import authMiddleware from "../middleware/authorization.middleware.js";
 import auth from "./auth.route.js";
 import unit from "./unit.route.js";
 import fnb from "./fnb.route.js";
@@ -10,11 +11,11 @@ import transactionReport from "./transaction/report.route.js";
 const route = Router();
 
 route.use("/auth", auth);
-route.use("/unit", unit);
+route.use("/unit", authMiddleware, unit);
 route.use("/fnb", fnb);
-route.use("/transaction", transaction);
-route.use("/transaction/payment", payment);
-route.use("/transaction/fnb-item", orderedFnb);
-route.use("/transaction/report", transactionReport);
+route.use("/transaction", authMiddleware, transaction);
+route.use("/transaction/payment", authMiddleware, payment);
+route.use("/transaction/fnb-item", authMiddleware, orderedFnb);
+route.use("/transaction/report", authMiddleware, transactionReport);
 
 export default route;

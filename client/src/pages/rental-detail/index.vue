@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, computed, ref } from "vue";
 import BaseLayout from "../../components/__Layout.vue";
-import Axios from "axios";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import "dayjs/locale/id.js";
@@ -20,6 +19,7 @@ import {
   Wallet,
 } from "@lucide/vue";
 import { formatRupiah } from "../../helper/index.ts";
+import { useAxios } from "../../composables/useAxios.ts";
 
 dayjs.extend(utc);
 
@@ -27,6 +27,7 @@ const props = defineProps({
   id: String,
 });
 const router = useRouter();
+const axios = useAxios();
 const { confirm } = useAlertDialog();
 
 const paymentMethod = ref("cash");
@@ -79,11 +80,8 @@ function showToast(message: string) {
   }, 2200);
 }
 
-const modifyFnbQty = async (orderId: number, type: "increase" | "decrease") => {
-  await Axios.patch(
-    `${import.meta.env.VITE_API_URL}/transaction/fnb-item/change-qty/${orderId}/${type}`,
-  );
-};
+const modifyFnbQty = async (orderId: number, type: "increase" | "decrease") =>
+  axios.patch(`transaction/fnb-item/change-qty/${orderId}/${type}`, () => {});
 
 async function incrementQty(item: OrderedFnbItem) {
   try {
@@ -102,42 +100,38 @@ async function decrementQty(item: OrderedFnbItem) {
 }
 
 const pickFnbItem = async (catalogItem: FnbItem) => {
-  try {
-    const response = await Axios.post(
-      `${import.meta.env.VITE_API_URL}/transaction/fnb-item/add`,
-      {
-        transaction_id: transactionId.value,
-        fnb_id: catalogItem.id,
-      },
-    );
+  axios.post(
+    "transaction/fnb-item/add",
+    {
+      transaction_id: transactionId.value,
+      fnb_id: catalogItem.id,
+    },
+    (response: any) => {
+      const existing = fnbItems.value.find(
+        (i) => i.fnb_item_id === catalogItem.id,
+      );
+      if (existing) {
+        existing.qty += 1;
+      } else {
+        fnbItems.value.push({
+          ...catalogItem,
+          id: response.data.newFnbTransaction.id,
+          fnb_item_id: catalogItem.id,
+          qty: 1,
+        });
+        console.log(fnbItems.value);
+      }
 
-    const existing = fnbItems.value.find(
-      (i) => i.fnb_item_id === catalogItem.id,
-    );
-    if (existing) {
-      existing.qty += 1;
-    } else {
-      fnbItems.value.push({
-        ...catalogItem,
-        id: response.data.newFnbTransaction.id,
-        fnb_item_id: catalogItem.id,
-        qty: 1,
-      });
-      console.log(fnbItems.value);
-    }
-
-    showToast(`${catalogItem.name} ditambahkan`);
-  } catch (err) {}
+      showToast(`${catalogItem.name} ditambahkan`);
+    },
+  );
 
   setTimeout(() => (sidebarStatus.value = false), 250);
 };
 
-async function removeFnbItem(id: number) {
+function removeFnbItem(id: number) {
   fnbItems.value = fnbItems.value.filter((i) => i.id !== id);
-  console.log(id);
-  await Axios.delete(
-    `${import.meta.env.VITE_API_URL}/transaction/fnb-item/${id}`,
-  );
+  axios.delete("transaction/fnb-item/" + id, () => {});
 }
 
 // ================= Format & Perhitungan =================
@@ -155,46 +149,44 @@ const grandTotal = computed(() => unitRentTotal.value + fnbTotal.value);
 onMounted(async () => {
   document.title = "Detail sewa | Reno Rental";
 
-  try {
-    const response = await Axios.get(
-      `http://localhost:8080/transaction/unit/${props.id}`,
-    );
+  axios.get(
+    `transaction/unit/${props.id}`,
+    (response: any) => {
+      transactionId.value = response.data.id;
+      customerName.value = response.data.customer_name;
+      rentedUnit.value = response.data.transactionItemUnits[0].unit_item.title;
+      rawStartTime.value = response.data.transactionItemUnits[0].start_time;
+      rawEndTime.value = response.data.transactionItemUnits[0].end_time;
+      paymentMethod.value = response.data.payment_method;
 
-    console.log(response);
+      if (paymentMethod.value === "qris") {
+        paymentLink.value = response.data.paymentLink[0];
+        qrisUrl.value = paymentLink.value.url;
 
-    transactionId.value = response.data.id;
-    customerName.value = response.data.customer_name;
-    rentedUnit.value = response.data.transactionItemUnits[0].unit_item.title;
-    rawStartTime.value = response.data.transactionItemUnits[0].start_time;
-    rawEndTime.value = response.data.transactionItemUnits[0].end_time;
-    paymentMethod.value = response.data.payment_method;
+        paymentSelectionMode.value = false;
+      }
 
-    if (paymentMethod.value === "qris") {
-      paymentLink.value = response.data.paymentLink[0];
-      qrisUrl.value = paymentLink.value.url;
+      playDuration.value = response.data.transactionItemUnits[0].play_time;
+      rentPricePerHour.value =
+        response.data.transactionItemUnits[0].unit_item.rent_price;
 
-      paymentSelectionMode.value = false;
-    }
-
-    playDuration.value = response.data.transactionItemUnits[0].play_time;
-    rentPricePerHour.value =
-      response.data.transactionItemUnits[0].unit_item.rent_price;
-
-    const transactionFnb = response.data.transactionItemFnbs;
-    transactionFnb.forEach((item: any) => {
-      fnbItems.value.push({
-        id: item.id,
-        fnb_item_id: item.fnb_item.id,
-        name: item.fnb_item.title,
-        price: item.fnb_item.price,
-        qty: item.quantity,
+      const transactionFnb = response.data.transactionItemFnbs;
+      transactionFnb.forEach((item: any) => {
+        fnbItems.value.push({
+          id: item.id,
+          fnb_item_id: item.fnb_item.id,
+          name: item.fnb_item.title,
+          price: item.fnb_item.price,
+          qty: item.quantity,
+        });
       });
-    });
-  } catch (err) {
-    router.replace({
-      name: "NotFound",
-    });
-  }
+    },
+    () => {
+      router.replace({
+        name: "NotFound",
+      });
+    },
+  );
 });
 
 onUnmounted(() => {
@@ -203,40 +195,38 @@ onUnmounted(() => {
 
 const handlePayment = async () => {
   if (paymentMethod.value === "qris") {
-    try {
-      isLoadingQris.value = true;
-      const response = await Axios.post(
-        `http://localhost:8080/transaction/payment/generate-qris`,
-        {
-          transaction_id: transactionId.value,
-        },
-      );
+    axios.post(
+      "transaction/payment/generate-qris",
+      {
+        transaction_id: transactionId.value,
+      },
+      (response: any) => {
+        const redirectUrl = response.data.url;
 
-      const redirectUrl = response.data.url;
+        if (!redirectUrl) {
+          throw new Error("Snap URL tidak ditemukan");
+        }
 
-      if (!redirectUrl) {
-        throw new Error("Snap URL tidak ditemukan");
-      }
-
-      qrisUrl.value = redirectUrl;
-      showQrisModal.value = true;
-      paymentSelectionMode.value = false;
-    } catch (err) {
-      showToast("Gagal membuat QRIS. Silakan coba lagi.");
-      console.error(err);
-    } finally {
-      isLoadingQris.value = false;
-    }
+        qrisUrl.value = redirectUrl;
+        showQrisModal.value = true;
+        paymentSelectionMode.value = false;
+      },
+      () => {
+        showToast("Gagal membuat QRIS. Silakan coba lagi.");
+      },
+    );
+    isLoadingQris.value = false;
   } else {
     // Logic bayar tunai biasa
-    const response = await Axios.post(
-      `${import.meta.env.VITE_API_URL}/transaction/proceed-payment/${transactionId.value}`,
+    axios.post(
+      `transaction/proceed-payment/${transactionId.value}`,
       {
         payment_method: paymentMethod.value,
       },
+      (response: any) => {
+        console.log(response);
+      },
     );
-
-    console.log(response);
   }
 };
 
