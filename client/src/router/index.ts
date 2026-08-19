@@ -7,10 +7,16 @@ import NewRental from "../pages/new-rental/NewRental.vue";
 import NotFound from "../pages/NotFound.vue";
 import TransactionReport from "../pages/TransactionReport.vue";
 import FinancialStatements from "../pages/FinancialStatements.vue";
+import Login from "../pages/Login.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    {
+      path: "/login",
+      name: "login",
+      component: Login,
+    },
     {
       path: "/dashboard",
       name: "dashboard",

@@ -123,3 +123,32 @@ model Payment_Link {
   
   @@map("payment_link")
 }
+
+model User {
+  id Int @id @default(autoincrement())
+  full_name String
+  email String
+  username String
+  password String
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+
+  refreshToken User_Refresh_Token[]
+  @@map("user")
+}
+
+model User_Refresh_Token {
+  id Int @id @default(autoincrement())
+  user_id Int
+  token String
+  expires_at DateTime
+  is_revoked Boolean
+  user_agent String
+  ip_address String
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("user_refresh_token")
+
+}
