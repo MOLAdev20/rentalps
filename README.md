@@ -1,32 +1,32 @@
-# Reno Rental POS
+# Rental POS
 
-Aplikasi *point of sale* (POS) untuk operasional rental PlayStation. Aplikasi ini membantu administrator mengelola unit PS, mencatat sesi sewa dan pesanan makanan/minuman (FnB), memproses pembayaran, serta melihat laporan transaksi dan keuangan.
+Aplikasi _point of sale_ (POS) untuk operasional rental PlayStation. Aplikasi ini membantu administrator mengelola unit PS, mencatat sesi sewa dan pesanan makanan/minuman (FnB), memproses pembayaran, serta melihat laporan transaksi dan keuangan.
 
 ![Diagram basis data](./schema.png)
 
 ## Fitur utama
 
-- Autentikasi administrator dengan **JWT** dan penyimpanan *refresh token*.
+- Autentikasi administrator dengan **JWT** dan penyimpanan _refresh token_.
 - Dashboard ringkasan operasional rental.
 - Manajemen data unit PlayStation, termasuk harga sewa dan status `available`, `rented`, atau `maintainance`.
 - Pembuatan sesi sewa: nama pelanggan, durasi bermain, waktu mulai/selesai, dan perhitungan biaya otomatis.
 - Katalog serta pesanan makanan dan minuman (FnB) pada transaksi sewa.
 - Detail sesi aktif untuk menambah/menghapus FnB atau mengubah jumlah pesanan.
-- Pembayaran tunai dan pembuatan tautan QRIS menggunakan **Midtrans Snap** (mode *sandbox*).
+- Pembayaran tunai dan pembuatan tautan QRIS menggunakan **Midtrans Snap** (mode _sandbox_).
 - Riwayat/laporan transaksi.
 - Laporan keuangan yang dapat difilter berdasarkan rentang tanggal, mencakup pendapatan sewa, FnB, tunai, QRIS, dan total transaksi.
 
 ## Teknologi
 
-| Bagian | Teknologi |
-| --- | --- |
-| Frontend | Vue 3, TypeScript, Vite, Vue Router |
-| Antarmuka | Tailwind CSS, Lucide Vue, Chart.js |
-| Backend | Express 5, TypeScript |
-| Basis data | MySQL dengan Prisma ORM dan Prisma MariaDB Adapter |
-| Autentikasi | JSON Web Token (JWT), bcrypt |
-| Integrasi pembayaran | Midtrans Snap (QRIS) |
-| HTTP client | Axios |
+| Bagian               | Teknologi                                          |
+| -------------------- | -------------------------------------------------- |
+| Frontend             | Vue 3, TypeScript, Vite, Vue Router                |
+| Antarmuka            | Tailwind CSS, Lucide Vue, Chart.js                 |
+| Backend              | Express 5, TypeScript                              |
+| Basis data           | MySQL dengan Prisma ORM dan Prisma MariaDB Adapter |
+| Autentikasi          | JSON Web Token (JWT), bcrypt                       |
+| Integrasi pembayaran | Midtrans Snap (QRIS)                               |
+| HTTP client          | Axios                                              |
 
 ## Arsitektur dan struktur proyek
 
@@ -132,16 +132,16 @@ npm run preview
 
 ## Model data utama
 
-| Model | Kegunaan |
-| --- | --- |
-| `User` | Akun administrator aplikasi. |
-| `User_Refresh_Token` | Token sesi jangka panjang yang terkait dengan pengguna. |
-| `Unit_Item` | Master unit PlayStation beserta harga dan statusnya. |
-| `Fnb_Item` | Master produk makanan/minuman. |
-| `Transaction` | Header transaksi sewa dan informasi pembayaran. |
-| `Transaction_Item_Unit` | Rincian unit, durasi, biaya, dan waktu sesi sewa. |
-| `Transaction_Item_Fnb` | Rincian produk FnB pada transaksi. |
-| `Payment_Link` | Tautan pembayaran QRIS dari Midtrans beserta masa berlaku/statusnya. |
+| Model                   | Kegunaan                                                             |
+| ----------------------- | -------------------------------------------------------------------- |
+| `User`                  | Akun administrator aplikasi.                                         |
+| `User_Refresh_Token`    | Token sesi jangka panjang yang terkait dengan pengguna.              |
+| `Unit_Item`             | Master unit PlayStation beserta harga dan statusnya.                 |
+| `Fnb_Item`              | Master produk makanan/minuman.                                       |
+| `Transaction`           | Header transaksi sewa dan informasi pembayaran.                      |
+| `Transaction_Item_Unit` | Rincian unit, durasi, biaya, dan waktu sesi sewa.                    |
+| `Transaction_Item_Fnb`  | Rincian produk FnB pada transaksi.                                   |
+| `Payment_Link`          | Tautan pembayaran QRIS dari Midtrans beserta masa berlaku/statusnya. |
 
 ## Ringkasan endpoint API
 
@@ -151,26 +151,26 @@ Endpoint yang berada di balik autentikasi memerlukan header berikut:
 Authorization: Bearer <token_jwt>
 ```
 
-| Metode | Endpoint | Keterangan | Autentikasi |
-| --- | --- | --- | --- |
-| `POST` | `/auth` | Login dan memperoleh token JWT. | Tidak |
-| `GET` | `/auth/verify` | Memverifikasi token. | Mengirim token |
-| `GET` | `/auth/register` | Mendaftarkan pengguna (implementasi saat ini membaca data dari body). | Tidak |
-| `GET` | `/unit` | Mengambil semua unit PS. | Ya |
-| `GET` | `/unit/available/:id` | Mengambil unit yang masih tersedia. | Ya |
-| `GET` | `/unit/:id` | Mengambil detail unit. | Ya |
-| `POST` | `/unit` | Menambahkan unit PS. | Ya |
-| `GET` | `/fnb` | Mengambil katalog FnB. | Tidak |
-| `POST` | `/fnb` | Menambahkan item FnB. | Tidak |
-| `GET` | `/transaction` | Mengambil daftar transaksi. | Ya |
-| `POST` | `/transaction` | Membuat transaksi/sesi sewa. | Ya |
-| `GET` | `/transaction/unit/:id` | Mengambil detail transaksi aktif sebuah unit. | Ya |
-| `POST` | `/transaction/fnb-item/add` | Menambahkan FnB ke transaksi. | Ya |
-| `DELETE` | `/transaction/fnb-item/:id` | Menghapus FnB dari transaksi. | Ya |
-| `PATCH` | `/transaction/fnb-item/change-qty/:id/:changeType` | Mengubah kuantitas FnB. | Ya |
-| `POST` | `/transaction/payment/proceed-payment` | Menyelesaikan pembayaran dan membebaskan unit. | Ya |
-| `POST` | `/transaction/payment/generate-qris` | Membuat tautan QRIS Midtrans. | Ya |
-| `GET` | `/transaction/report/financial-statements` | Mengambil ringkasan keuangan; mendukung `start_date` dan `end_date`. | Ya |
+| Metode   | Endpoint                                           | Keterangan                                                            | Autentikasi    |
+| -------- | -------------------------------------------------- | --------------------------------------------------------------------- | -------------- |
+| `POST`   | `/auth`                                            | Login dan memperoleh token JWT.                                       | Tidak          |
+| `GET`    | `/auth/verify`                                     | Memverifikasi token.                                                  | Mengirim token |
+| `GET`    | `/auth/register`                                   | Mendaftarkan pengguna (implementasi saat ini membaca data dari body). | Tidak          |
+| `GET`    | `/unit`                                            | Mengambil semua unit PS.                                              | Ya             |
+| `GET`    | `/unit/available/:id`                              | Mengambil unit yang masih tersedia.                                   | Ya             |
+| `GET`    | `/unit/:id`                                        | Mengambil detail unit.                                                | Ya             |
+| `POST`   | `/unit`                                            | Menambahkan unit PS.                                                  | Ya             |
+| `GET`    | `/fnb`                                             | Mengambil katalog FnB.                                                | Tidak          |
+| `POST`   | `/fnb`                                             | Menambahkan item FnB.                                                 | Tidak          |
+| `GET`    | `/transaction`                                     | Mengambil daftar transaksi.                                           | Ya             |
+| `POST`   | `/transaction`                                     | Membuat transaksi/sesi sewa.                                          | Ya             |
+| `GET`    | `/transaction/unit/:id`                            | Mengambil detail transaksi aktif sebuah unit.                         | Ya             |
+| `POST`   | `/transaction/fnb-item/add`                        | Menambahkan FnB ke transaksi.                                         | Ya             |
+| `DELETE` | `/transaction/fnb-item/:id`                        | Menghapus FnB dari transaksi.                                         | Ya             |
+| `PATCH`  | `/transaction/fnb-item/change-qty/:id/:changeType` | Mengubah kuantitas FnB.                                               | Ya             |
+| `POST`   | `/transaction/payment/proceed-payment`             | Menyelesaikan pembayaran dan membebaskan unit.                        | Ya             |
+| `POST`   | `/transaction/payment/generate-qris`               | Membuat tautan QRIS Midtrans.                                         | Ya             |
+| `GET`    | `/transaction/report/financial-statements`         | Mengambil ringkasan keuangan; mendukung `start_date` dan `end_date`.  | Ya             |
 
 ## Contoh payload
 
@@ -209,8 +209,8 @@ Authorization: Bearer <token_jwt>
 ## Catatan keamanan dan pengembangan
 
 - Jangan pernah memasukkan `.env`, kredensial database, kunci Midtrans, atau `JWT_SECRET_KEY` ke Git.
-- Token akses memiliki masa berlaku 15 menit; *refresh token* dibuat dengan masa berlaku satu hari dan disimpan di basis data.
-- QRIS dikonfigurasi dalam mode *sandbox* (`isProduction: false`). Ubah konfigurasi pembayaran dan kunci Midtrans secara sadar saat memasuki produksi.
+- Token akses memiliki masa berlaku 15 menit; _refresh token_ dibuat dengan masa berlaku satu hari dan disimpan di basis data.
+- QRIS dikonfigurasi dalam mode _sandbox_ (`isProduction: false`). Ubah konfigurasi pembayaran dan kunci Midtrans secara sadar saat memasuki produksi.
 - Endpoint registrasi saat ini terdaftar sebagai `GET`, walaupun kontrolernya membaca body. Untuk API yang konsisten, endpoint tersebut sebaiknya diubah menjadi `POST` pada pengembangan berikutnya.
 
 ## Lisensi

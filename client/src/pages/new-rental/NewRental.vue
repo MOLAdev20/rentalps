@@ -123,6 +123,15 @@ const fnbTotal: ComputedRef<number> = computed(() =>
 const grandTotal = computed(() => totalRentPrice.value + fnbTotal.value);
 
 const proceedPayment = async () => {
+  if (!customerName.value) {
+    alert({
+      title: "Nama penyewa belum diisi",
+      message: "Silahkan isi nama penyewa",
+      variant: "warning",
+    });
+    return;
+  }
+
   const askProceed: Boolean = await confirm({
     title: "Mulai Main?",
     message: "Unit dimainkan sampai waktu yang ditentukan",

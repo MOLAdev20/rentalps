@@ -147,7 +147,7 @@ const grandTotal = computed(() => unitRentTotal.value + fnbTotal.value);
 
 // ================= Lifecycle =================
 onMounted(async () => {
-  document.title = "Detail sewa | Reno Rental";
+  document.title = "Detail sewa |  Rental";
 
   axios.get(
     `transaction/unit/${props.id}`,
@@ -219,12 +219,16 @@ const handlePayment = async () => {
   } else {
     // Logic bayar tunai biasa
     axios.post(
-      `transaction/proceed-payment/${transactionId.value}`,
+      `transaction/payment/proceed-payment`,
       {
+        transaction_id: transactionId.value,
         payment_method: paymentMethod.value,
       },
       (response: any) => {
         console.log(response);
+      },
+      () => {
+        showToast("Gagal membuat QRIS. Silakan coba lagi.");
       },
     );
   }

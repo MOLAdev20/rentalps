@@ -24,15 +24,15 @@ const unitData = ref<Unit[]>([]);
 const isModalOpen = ref(false);
 
 onMounted(() => {
-  document.title = "Sewa | Reno Rental";
+  document.title = "Sewa |  Rental";
   fetchData();
 });
 
 const router = useRouter();
 const axios = useAxios();
 
-const fetchData = () => {
-  axios.get(
+const fetchData = async () => {
+  await axios.get(
     "unit",
     (response: any) => {
       unitData.value = response.data.unit;
