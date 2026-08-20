@@ -2,7 +2,7 @@
 import { ref } from "vue";
 import Axios from "axios";
 import { useRoute, useRouter } from "vue-router";
-import screen from "../../public/screen.jpeg";
+import screen from "/screen.jpeg";
 import { Gamepad2, User, Lock, Eye, EyeOff, LoaderCircle } from "@lucide/vue";
 import { onMounted } from "vue";
 
@@ -16,13 +16,26 @@ const rememberMe = ref<boolean>(false);
 const isLoading = ref<boolean>(false);
 const errorMessage = ref<string>("");
 
-onMounted(() => {
-  document.title = "Login | Reno Rental";
+onMounted(async () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (token) {
+      await Axios.get(`${import.meta.env.VITE_API_URL}/auth/verify`, {
+        headers: {
+          Authorization: token,
+        },
+      });
 
-  if (route.query.message) {
-    const message: string = String(route.query.message);
-    errorMessage.value = message;
-    router.replace({ query: {} });
+      router.push("/dashboard");
+    }
+  } catch (err: any) {
+    document.title = "Login |  Rental";
+
+    if (route.query.message) {
+      const message: string = String(route.query.message);
+      errorMessage.value = message;
+      router.replace({ query: {} });
+    }
   }
 });
 
@@ -92,8 +105,8 @@ async function handleLogin() {
         >
           <Gamepad2 :size="16" class="text-white" />
         </div>
-        <span class="font-display font-semibold text-white text-sm"
-          >Reno Rental POS</span
+        <span class="font-display font-semibold text-white text-sm">
+          Rental POS</span
         >
       </div>
 
@@ -133,8 +146,8 @@ async function handleLogin() {
           >
             <Gamepad2 :size="18" class="text-white" />
           </div>
-          <span class="font-display font-bold text-gray-900 text-[15px]"
-            >Reno Rental POS</span
+          <span class="font-display font-bold text-gray-900 text-[15px]">
+            Rental POS</span
           >
         </div>
 

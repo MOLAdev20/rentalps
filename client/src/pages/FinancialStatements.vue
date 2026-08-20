@@ -266,7 +266,7 @@ const renderCharts = () => {
 };
 
 onMounted(() => {
-  document.title = "Laporan Keuangan | Reno Rental";
+  document.title = "Laporan Keuangan |  Rental";
   window.addEventListener("click", closeFilterOnOutside);
   fetchFinancialData();
 });

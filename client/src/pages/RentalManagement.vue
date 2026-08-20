@@ -24,7 +24,7 @@ const unitData = ref<Unit[]>([]);
 const axios = useAxios();
 
 onMounted(() => {
-  document.title = "Sewa | Reno Rental";
+  document.title = "Sewa |  Rental";
   axios.get(
     "unit",
     (response: any) => {

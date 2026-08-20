@@ -125,6 +125,48 @@ const endpoint = {
       });
     }
   },
+
+  refreshToken: async (req: Request, res: Response) => {
+    const userId: number = Number(req.body.user_id);
+
+    try {
+      const refreshToken = await prisma.user_Refresh_Token.findFirstOrThrow({
+        select: { token: true },
+        where: {
+          user_id: userId,
+        },
+      });
+
+      // const isTokenValid = await jwt.verify(
+      //   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhbWluIiwiaWF0IjoxNzg3MjI4OTA3LCJleHAiOjE3ODczMTUzMDd9.3GKaLF2KltMOr6FaP7Z8zPnsWHvWhPqXVaPVSFZjYdY",
+      // );
+
+      const isTokenValid = await jwt.verify(refreshToken.token);
+
+      const newToken = await jwt.signToken(
+        {
+          id: isTokenValid.id,
+          username: isTokenValid.username,
+        },
+        "1m",
+      );
+
+      res.json({
+        token: newToken,
+      });
+    } catch (err: any) {
+      if (err.message == "jwt expired" || err.message == "invalid signature") {
+        return res.status(401).json({
+          message: "jwt-is-revoked",
+        });
+      }
+
+      res.status(500).json({
+        message: "error",
+        err,
+      });
+    }
+  },
 };
 
 export default endpoint;
