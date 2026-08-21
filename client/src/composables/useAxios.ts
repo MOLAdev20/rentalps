@@ -28,29 +28,29 @@ export function useAxios() {
   Axios.interceptors.response.use(
     (response) => response,
     async (err) => {
-      if (
-        err.response.status === 401 &&
-        err.response.data.message === "jwt expired"
-      ) {
-        try {
-          const refreshTokenResponse = await Axios.post(
-            `${base_url}/auth/refresh-token`,
-            {
-              user_id: 1,
-            },
-          );
-          localStorage.setItem(
-            "token",
-            `Bearer ${refreshTokenResponse.data.token}`,
-          );
+      if (err.response.status === 401) {
+        if (err.response.data.message === "jwt expired") {
+          try {
+            const refreshTokenResponse = await Axios.post(
+              `${base_url}/auth/refresh-token`,
+              {
+                user_id: 1,
+              },
+            );
+            localStorage.setItem(
+              "token",
+              `Bearer ${refreshTokenResponse.data.token}`,
+            );
 
-          return Axios.request(err.config);
-        } catch (err: any) {
-          if (err.response.status === 500) {
-            console.log("refresh token endpoint internal server error");
+            return Axios.request(err.config);
+          } catch (err: any) {
+            if (err.response.status === 500) {
+              console.log("refresh token endpoint internal server error");
+            }
+            redirectToLogin();
           }
-          redirectToLogin();
         }
+        redirectToLogin();
       }
       return Promise.reject(err);
     },

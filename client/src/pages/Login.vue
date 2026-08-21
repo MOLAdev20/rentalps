@@ -17,6 +17,7 @@ const isLoading = ref<boolean>(false);
 const errorMessage = ref<string>("");
 
 onMounted(async () => {
+  document.title = "Login |  Rental";
   try {
     const token = localStorage.getItem("token");
     if (token) {
@@ -27,10 +28,10 @@ onMounted(async () => {
       });
 
       router.push("/dashboard");
+      return;
     }
+    throw new Error();
   } catch (err: any) {
-    document.title = "Login |  Rental";
-
     if (route.query.message) {
       const message: string = String(route.query.message);
       errorMessage.value = message;
@@ -139,26 +140,12 @@ async function handleLogin() {
       class="col-span-2 flex items-center justify-center px-6 py-12 sm:px-10"
     >
       <div class="w-full max-w-sm">
-        <!-- Brand -->
-        <div class="flex items-center gap-2.5 mb-10">
-          <div
-            class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0"
-          >
-            <Gamepad2 :size="18" class="text-white" />
-          </div>
-          <span class="font-display font-bold text-gray-900 text-[15px]">
-            Rental POS</span
-          >
-        </div>
-
         <h1
           class="font-display text-2xl font-bold tracking-tight text-gray-900"
         >
-          Selamat Datang Kembali
+          Login
         </h1>
-        <p class="mt-1.5 text-sm text-gray-500">
-          Masuk ke dashboard buat kelola rental PS kamu
-        </p>
+        <p class="mt-1.5 text-sm text-gray-500">Selamat datang kembali!</p>
 
         <!-- Alert error -->
         <Transition
