@@ -98,7 +98,16 @@ function decrementQty(item: FnBItem) {
 }
 
 function removeFnbItem(item: FnBItem) {
-  selectedFnBItems.value = selectedFnBItems.value.filter((i) => i !== item);
+  confirm({
+    title: "Hapus item ini?",
+    message: `Buang ${item.name}?`,
+    cancelText: "Batal",
+    confirmText: "Ya, Hapus",
+    variant: "warning",
+  }).then((result) => {
+    if (result)
+      selectedFnBItems.value = selectedFnBItems.value.filter((i) => i !== item);
+  });
 }
 
 const pickFnbItem = (catalogItem: {

@@ -18,6 +18,7 @@ interface Unit {
   title: string;
   rent_price: string;
   status: string;
+  rentedSession: [];
 }
 
 const unitData = ref<Unit[]>([]);
@@ -34,8 +35,12 @@ onMounted(() => {
           title: el.title,
           rent_price: formatRupiah(el.rent_price),
           status: el.status,
+          rentedSession: el.transactionItemUnits,
         });
       });
+
+      console.log(unitData.value);
+      console.log(response.data.unit);
     },
     (err: any) => {
       console.log(err);
@@ -202,6 +207,7 @@ onMounted(() => {
             :name="unit.title"
             :price-per-hour="unit.rent_price"
             :status="unit.status"
+            :rented-session="unit.rentedSession"
           />
         </div>
       </div>

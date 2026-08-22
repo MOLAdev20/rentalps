@@ -37,6 +37,12 @@ enum Payment_Link_Status {
   expired
 }
 
+enum Rented_Unit_Status {
+  playing
+  finished
+  cancel
+}
+
 model Unit_Item {
   id                   Int                     @id @default(autoincrement())
   title                String
@@ -90,6 +96,7 @@ model Transaction_Item_Unit {
   sub_total      Float
   start_time     DateTime @default(now())
   end_time       DateTime
+  status        Rented_Unit_Status @default(playing)
 
   transaction Transaction @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
   unit_item   Unit_Item   @relation(fields: [unit_item_id], references: [id], onDelete: Cascade)

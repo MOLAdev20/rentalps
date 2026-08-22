@@ -5,7 +5,31 @@ import type { RegisterInput } from "../schemas/unit.schema.js";
 const endpoint = {
   getAll: async (_: Request, res: Response) => {
     try {
-      const unit = await prisma.unit_Item.findMany();
+      const rawUnit = await prisma.unit_Item.findMany({
+        include: {
+          transactionItemUnits: {
+            where: {
+              status: "playing",
+            },
+            select: {
+              start_time: true,
+              end_time: true,
+            },
+          },
+        },
+      });
+
+      const unit = rawUnit.map((item) => {
+        let transactionItemUnits: any = {};
+        if (item.transactionItemUnits.length != 0) {
+          transactionItemUnits = item.transactionItemUnits[0];
+        }
+
+        return {
+          ...item,
+          transactionItemUnits: transactionItemUnits,
+        };
+      });
 
       if (unit.length <= 0) {
         return res.status(404).json({

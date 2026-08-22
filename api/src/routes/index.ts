@@ -13,9 +13,9 @@ const route = Router();
 route.use("/auth", auth);
 route.use("/unit", authMiddleware, unit);
 route.use("/fnb", fnb);
-route.use("/transaction", authMiddleware, transaction);
-route.use("/transaction/payment", authMiddleware, payment);
+route.use("/transaction/payment", payment);
 route.use("/transaction/fnb-item", authMiddleware, orderedFnb);
 route.use("/transaction/report", authMiddleware, transactionReport);
+route.use("/transaction", authMiddleware, transaction);
 
 export default route;

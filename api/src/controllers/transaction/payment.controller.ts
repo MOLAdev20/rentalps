@@ -115,6 +115,24 @@ const endpoint = {
       });
     }
   },
+
+  notification: async (req: Request, res: Response) => {
+    console.log(req.body);
+    res.json(req.body);
+    // snap.transaction
+    //   .notification(req.body)
+    //   .then((statusResponse: any) => {
+    //     console.log(statusResponse);
+    //     res.json(statusResponse);
+    //   })
+    //   .catch((err: any) => {
+    //     console.log(err);
+    //     res.status(500).json({
+    //       message: "error",
+    //       err,
+    //     });
+    //   });
+  },
 };
 
 export default endpoint;
