@@ -29,6 +29,7 @@ export function useAxios() {
     (response) => response,
     async (err) => {
       if (err.response.status === 401) {
+        console.log(err.response.data.message);
         if (err.response.data.message === "jwt expired") {
           try {
             const refreshTokenResponse = await Axios.post(
@@ -50,7 +51,13 @@ export function useAxios() {
             redirectToLogin();
           }
         }
-        redirectToLogin();
+        router.push({
+          name: "login",
+          query: {
+            alert: "warning",
+            message: "Login untuk melanjutkan!",
+          },
+        });
       }
       return Promise.reject(err);
     },
