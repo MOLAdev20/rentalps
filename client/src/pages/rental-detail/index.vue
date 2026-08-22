@@ -10,6 +10,7 @@ import { useRouter } from "vue-router";
 import AlertDialog from "../../components/AlertDialog.vue";
 import { useAlertDialog } from "../../composables/useAlertDialog.ts";
 import {
+  ArrowLeftCircle,
   Minus,
   Plus,
   PlusCircle,
@@ -28,9 +29,9 @@ const props = defineProps({
 });
 const router = useRouter();
 const axios = useAxios();
-const { confirm } = useAlertDialog();
+const { alert, confirm } = useAlertDialog();
 
-const paymentMethod = ref("cash");
+const paymentMethod = ref("");
 const paymentLink = ref<{ url: string; expired_at: string; status: string }>({
   url: "",
   expired_at: "",
@@ -95,7 +96,7 @@ async function decrementQty(item: OrderedFnbItem) {
     removeFnbItem(item.id);
     return;
   }
-  await modifyFnbQty(item.id, "increase");
+  await modifyFnbQty(item.id, "decrease");
   item.qty -= 1;
 }
 
@@ -130,8 +131,16 @@ const pickFnbItem = async (catalogItem: FnbItem) => {
 };
 
 function removeFnbItem(id: number) {
-  fnbItems.value = fnbItems.value.filter((i) => i.id !== id);
-  axios.delete("transaction/fnb-item/" + id, () => {});
+  confirm({
+    title: "Hapus Item?",
+    message: "Apakah kamu yakin?",
+    variant: "warning",
+  }).then((result) => {
+    if (result) {
+      fnbItems.value = fnbItems.value.filter((i) => i.id !== id);
+      axios.delete("transaction/fnb-item/" + id, () => {});
+    }
+  });
 }
 
 // ================= Format & Perhitungan =================
@@ -157,7 +166,10 @@ onMounted(async () => {
       rentedUnit.value = response.data.transactionItemUnits[0].unit_item.title;
       rawStartTime.value = response.data.transactionItemUnits[0].start_time;
       rawEndTime.value = response.data.transactionItemUnits[0].end_time;
-      paymentMethod.value = response.data.payment_method;
+
+      if (response.data.payment_method != "pending_payment") {
+        paymentMethod.value = response.data.payment_method;
+      }
 
       if (paymentMethod.value === "qris") {
         paymentLink.value = response.data.paymentLink[0];
@@ -194,44 +206,62 @@ onUnmounted(() => {
 });
 
 const handlePayment = async () => {
-  if (paymentMethod.value === "qris") {
-    axios.post(
-      "transaction/payment/generate-qris",
-      {
-        transaction_id: transactionId.value,
-      },
-      (response: any) => {
-        const redirectUrl = response.data.url;
-
-        if (!redirectUrl) {
-          throw new Error("Snap URL tidak ditemukan");
-        }
-
-        qrisUrl.value = redirectUrl;
-        showQrisModal.value = true;
-        paymentSelectionMode.value = false;
-      },
-      () => {
-        showToast("Gagal membuat QRIS. Silakan coba lagi.");
-      },
-    );
-    isLoadingQris.value = false;
-  } else {
-    // Logic bayar tunai biasa
-    axios.post(
-      `transaction/payment/proceed-payment`,
-      {
-        transaction_id: transactionId.value,
-        payment_method: paymentMethod.value,
-      },
-      (response: any) => {
-        console.log(response);
-      },
-      () => {
-        showToast("Gagal membuat QRIS. Silakan coba lagi.");
-      },
-    );
+  if (paymentMethod.value == "") {
+    return;
   }
+
+  confirm({
+    title: "Lanjutkan Pembayaran?",
+    message: "Mohon siapkan uang tunai atau metode pembayaran yang dipilih",
+    variant: "warning",
+  }).then((result) => {
+    if (result) {
+      if (paymentMethod.value === "qris") {
+        axios.post(
+          "transaction/payment/generate-qris",
+          {
+            transaction_id: transactionId.value,
+          },
+          (response: any) => {
+            const redirectUrl = response.data.url;
+
+            if (!redirectUrl) {
+              throw new Error("Snap URL tidak ditemukan");
+            }
+
+            qrisUrl.value = redirectUrl;
+            showQrisModal.value = true;
+            paymentSelectionMode.value = false;
+          },
+          () => {
+            showToast("Gagal membuat QRIS. Silakan coba lagi.");
+          },
+        );
+        isLoadingQris.value = false;
+      } else {
+        // Logic bayar tunai biasa
+        axios.post(
+          `transaction/payment/proceed-payment`,
+          {
+            transaction_id: transactionId.value,
+            payment_method: paymentMethod.value,
+          },
+          () => {
+            alert({
+              title: "Pembayaran Berhasil",
+              message: "Terimakasih telah bermain!",
+              variant: "success",
+            });
+
+            // router.push({ name: "rent" });
+          },
+          () => {
+            showToast("Gagal meyimpan pembayaran. Silakan coba lagi.");
+          },
+        );
+      }
+    }
+  });
 };
 
 const switchPaymentMode = async () => {
@@ -253,29 +283,21 @@ const switchPaymentMode = async () => {
   <BaseLayout>
     <div class="mx-auto max-w-7xl">
       <!-- Header -->
-      <div class="mb-6 flex items-center justify-between">
+      <div class="mb-6">
         <div>
-          <h1
-            class="font-display text-2xl font-bold tracking-tight text-gray-900"
-          >
-            Detail Sewa Unit — {{ rentedUnit || "..." }}
-          </h1>
+          <div class="flex gap-2 items-center">
+            <RouterLink :to="{ name: 'rent' }">
+              <ArrowLeftCircle class="text-indigo-600" :size="30" />
+            </RouterLink>
+            <h1
+              class="font-display text-2xl font-bold tracking-tight text-gray-900"
+            >
+              Detail Sewa Unit — {{ rentedUnit || "..." }}
+            </h1>
+          </div>
           <p class="mt-1 text-sm text-gray-500">
             Kelola waktu main, item FnB, dan pembayaran sesi ini
           </p>
-        </div>
-        <div
-          class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200"
-        >
-          <span class="relative flex h-2 w-2">
-            <span
-              class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"
-            ></span>
-            <span
-              class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"
-            ></span>
-          </span>
-          BERJALAN
         </div>
       </div>
 

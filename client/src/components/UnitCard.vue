@@ -1,56 +1,42 @@
 <script setup lang="ts">
-import { watch, ref } from "vue";
-import { ArrowRightCircle, Pause, PauseCircle, PlayCircle } from "@lucide/vue";
+import { onUnmounted, ref, watch } from "vue";
+import {
+  AlertCircle,
+  ArrowRightCircle,
+  PauseCircle,
+  PlayCircle,
+} from "@lucide/vue";
 import pslogo from "/ps-logo.webp";
 import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
-import duration from "dayjs/plugin/duration";
-dayjs.extend(utc);
-dayjs.extend(duration);
+
+interface RentedSession {
+  start_time: string;
+  end_time: string;
+}
 
 const props = defineProps<{
   id: number;
   name: string;
   pricePerHour: string;
   status: string;
-  rentedSession: any;
+  rentedSession?: RentedSession | null;
 }>();
 
-const remainingDuration = ref<string>();
-const remainingTimePercentage = ref<number>(0);
+const remainingDuration = ref<string>("");
+const remainingTimePercentage = ref(0);
+const isTicking = ref(false);
 
 let intervalId: ReturnType<typeof setInterval> | undefined;
+// non-reactive, cukup dibaca di dalam tick(), gak perlu trigger re-render
+let currentStart = 0;
+let currentEnd = 0;
 
-const formatRemainingDuration = (endTime: dayjs.Dayjs): string => {
-  const diffMs = Math.max(endTime.diff(dayjs()), 0);
-  const dur = dayjs.duration(diffMs);
-
-  // Math.floor(dur.asHours()) penting biar kalau durasinya > 24 jam, angkanya tetep akumulasi ke jam (misal 36 jam, bukan ke-reset jadi 1 hari 12 jam)
-  const hours = String(Math.floor(dur.asHours())).padStart(2, "0");
-  const minutes = String(dur.minutes()).padStart(2, "0");
-  const seconds = String(dur.seconds()).padStart(2, "0");
-
-  return `${hours}:${minutes}:${seconds}`;
-};
-
-const formatRemainingTimeToPercentage = (
-  startTime: dayjs.Dayjs,
-  endTime: dayjs.Dayjs,
-): number => {
-  const totalDuration = endTime.diff(startTime);
-
-  if (totalDuration <= 0) return 0;
-
-  // 1. Hitung durasi sisa waktu dari SEKARANG (real-time, bukan snapshot lama) ke WAKTU AKHIR
-  const remainingDuration = endTime.diff(dayjs());
-
-  // 2. Hitung persentase sisa waktunya
-  const percentage = (remainingDuration / totalDuration) * 100;
-
-  // 3. Clamp nilainya biar tetep di range 0% - 100%
-  const clampedPercentage = Math.min(Math.max(percentage, 0), 100);
-
-  return Number(clampedPercentage.toFixed(2));
+const formatRemainingDuration = (ms: number): string => {
+  const totalSeconds = Math.floor(Math.max(ms, 0) / 1_000);
+  const h = String((totalSeconds / 3_600) | 0).padStart(2, "0");
+  const m = String(((totalSeconds % 3_600) / 60) | 0).padStart(2, "0");
+  const s = String(totalSeconds % 60).padStart(2, "0");
+  return `${h}:${m}:${s}`;
 };
 
 const stopTicking = () => {
@@ -60,31 +46,76 @@ const stopTicking = () => {
   }
 };
 
+const resetTimer = () => {
+  remainingDuration.value = "";
+  remainingTimePercentage.value = 0;
+  isTicking.value = false;
+  currentStart = 0;
+  currentEnd = 0;
+};
+
+const tick = () => {
+  const totalDuration = currentEnd - currentStart;
+  const remaining = Math.max(currentEnd - Date.now(), 0);
+  const percentage = (remaining / totalDuration) * 100;
+
+  remainingDuration.value = formatRemainingDuration(remaining);
+  remainingTimePercentage.value =
+    Math.round(Math.min(percentage, 100) * 100) / 100;
+  isTicking.value = remaining > 0;
+
+  if (!isTicking.value) stopTicking();
+};
+
+const handleVisibilityChange = () => {
+  if (document.hidden) {
+    stopTicking();
+  } else if (isTicking.value && currentEnd > 0) {
+    tick();
+    if (isTicking.value) intervalId = setInterval(tick, 1_000);
+  }
+};
+
 watch(
-  [() => props.rentedSession.start_time, () => props.rentedSession.end_time],
-  () => {
-    // Hentikan interval lama dulu sebelum bikin yang baru,
-    // biar gak numpuk tiap kali prop waktu berubah
+  [
+    () => props.rentedSession?.start_time,
+    () => props.rentedSession?.end_time,
+    () => props.status,
+  ],
+  ([startTime, endTime, status]) => {
     stopTicking();
 
-    const rawStartTimeToLocal = dayjs(props.rentedSession.start_time).local();
-    const rawEndTimeToLocal = dayjs(props.rentedSession.end_time).local();
+    if (status !== "rented" || !startTime || !endTime) {
+      resetTimer();
+      return;
+    }
 
-    const tick = () => {
-      if (props.status == "rented") {
-        remainingDuration.value = formatRemainingDuration(rawEndTimeToLocal);
-        remainingTimePercentage.value = formatRemainingTimeToPercentage(
-          rawStartTimeToLocal,
-          rawEndTimeToLocal,
-        );
-      }
-    };
+    const start = dayjs(startTime).valueOf();
+    const end = dayjs(endTime).valueOf();
 
-    tick(); // langsung isi nilai awal, gak nunggu 1 detik pertama
-    intervalId = setInterval(tick, 1000);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+      resetTimer();
+      return;
+    }
+
+    currentStart = start;
+    currentEnd = end;
+
+    tick();
+
+    if (isTicking.value && !document.hidden) {
+      intervalId = setInterval(tick, 1_000);
+    }
   },
   { immediate: true },
 );
+
+document.addEventListener("visibilitychange", handleVisibilityChange);
+
+onUnmounted(() => {
+  stopTicking();
+  document.removeEventListener("visibilitychange", handleVisibilityChange);
+});
 </script>
 
 <template>
@@ -93,7 +124,7 @@ watch(
   >
     <div class="flex items-start gap-4">
       <div class="h-16 w-16 shrink-0 place-items-center rounded-2xl">
-        <img :src="pslogo" width="100%" />
+        <img :src="pslogo" width="100%" alt="PS Logo" />
       </div>
 
       <div class="min-w-0 flex-1">
@@ -104,15 +135,28 @@ watch(
             </h3>
           </div>
           <span
-            v-if="status == 'rented'"
+            v-if="status === 'rented' && isTicking"
             class="shrink-0 rounded-full px-3 py-1 text-sm font-semibold bg-emerald-600 text-white"
           >
             {{ remainingDuration }}
           </span>
+          <span
+            v-if="status === 'rented' && !isTicking"
+            class="shrink-0 rounded-full p-1 text-sm font-semibold bg-amber-600 text-white"
+          >
+            <AlertCircle :size="15" />
+          </span>
         </div>
 
         <div v-if="status === 'rented'" class="flex gap-1 mt-2">
-          <PauseCircle class="text-emerald-600" />
+          <PauseCircle
+            class="text-emerald-600"
+            v-if="status === 'rented' && isTicking"
+          />
+          <PlayCircle
+            class="text-amber-600"
+            v-if="status === 'rented' && !isTicking"
+          />
           <div
             class="mt-2.5 h-1.5 w-full rounded-full bg-gray-200 overflow-hidden flex"
           >
@@ -140,11 +184,20 @@ watch(
           </RouterLink>
 
           <RouterLink
-            v-if="status === 'rented'"
+            v-else-if="status === 'rented' && isTicking"
             class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl p-3 font-medium text-white bg-emerald-600 hover:bg-emerald-800 transition-all active:scale-[0.98] cursor-pointer"
             :to="{ name: 'rent-detail', params: { id } }"
           >
             <span>Sedang Disewa</span>
+            <ArrowRightCircle />
+          </RouterLink>
+
+          <RouterLink
+            v-else-if="status === 'rented' && !isTicking"
+            class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl p-3 font-medium text-white bg-amber-600 hover:bg-amber-800 transition-all active:scale-[0.98] cursor-pointer"
+            :to="{ name: 'rent-detail', params: { id } }"
+          >
+            <span>Selesai Disewa</span>
             <ArrowRightCircle />
           </RouterLink>
         </div>
