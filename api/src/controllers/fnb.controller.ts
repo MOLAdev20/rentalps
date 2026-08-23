@@ -5,7 +5,7 @@ import type { RegisterInput } from "../schemas/fnb.schema.js";
 const endpoint = {
   getAll: async (_: Request, res: Response) => {
     try {
-      const fnbItem = await prisma.fnb_Item.findMany();
+      const fnbItem = await prisma.fnBItem.findMany();
 
       res.json({
         fnb: fnbItem,

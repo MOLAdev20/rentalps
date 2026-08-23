@@ -1,55 +1,120 @@
+// Enum definitions
+Enum Unit_Item_Status {
+  available
+  rented
+  maintainance
+}
+
+Enum Transaction_Payment_Method {
+  pending_payment
+  qris
+  cash
+}
+
+Enum Transaction_Status {
+  pending
+  complete
+  cancel
+}
+
+Enum Payment_Link_Status {
+  pending
+  complete
+  cancel
+  expired
+}
+
+Enum Rented_Unit_Status {
+  playing
+  finished
+  cancel
+}
+
+// Table definitions
 Table unit_item {
-  id integer [primary key]
-  title string
+  id int [pk, increment]
+  title varchar
   description text
   rent_price float
-  status string // available, rented, maintenance
-  created_at timestamp
-  updated_at timestamp
+  status Unit_Item_Status [default: 'available']
+  created_at datetime [default: `now()`]
+  updated_at datetime
 }
 
 Table fnb_item {
-  id integer [primary key]
-  title string
+  id int [pk, increment]
+  title varchar
   description text
   price float
-  created_at timestamp
-  updated_at timestamp
+  created_at datetime [default: `now()`]
+  updated_at datetime
 }
 
 Table transaction {
-  id integer [primary key]
-  customer_name string // Nyimpen nama penyewa
-  status string // 'active' (lagi main), 'completed' (udah bayar)
+  id int [pk, increment]
+  customer_name varchar
   subtotal float
-  discount float
   total float
-  created_at timestamp
-  updated_at timestamp
+  payment_method Transaction_Payment_Method [default: 'pending_payment']
+  status Transaction_Status [default: 'pending']
+  created_at datetime [default: `now()`]
+  updated_at datetime [default: `now()`]
 }
 
-// Khusus nyatet rental PS-nya (Bisa support kalau 1 nota sewa > 1 PS)
-Table transaction_rental {
-  id integer [primary key]
-  transaction_id integer
-  unit_item_id integer
-  duration_hours integer // Jumlah jam yang di-input kasir
-  price_per_hour float // Snapshot harga pas disewa
-  start_time timestamp
-  end_time timestamp
+Table transaction_item_unit {
+  id int [pk, increment]
+  transaction_id int
+  unit_item_id int
+  play_time float
+  sub_total float
+  start_time datetime [default: `now()`]
+  end_time datetime
+  status Rented_Unit_Status [default: 'playing']
 }
 
-// Khusus nyatet FnB yang dipesen pas selesai main
-Table transaction_fnb {
-  id integer [primary key]
-  transaction_id integer
-  fnb_item_id integer
-  quantity integer // Berapa banyak makanan/minuman
-  price_snapshot float // Snapshot harga makanan pas dibeli
+Table transaction_item_fnb {
+  id int [pk, increment]
+  transaction_id int
+  fnb_item_id int
+  quantity int
+  sub_total float
 }
 
-Ref: "transaction"."id" < "transaction_rental"."transaction_id"
-Ref: "unit_item"."id" < "transaction_rental"."unit_item_id"
+Table payment_link {
+  id int [pk, increment]
+  transaction_id int
+  url varchar
+  expired_at datetime [default: `now()`]
+  status Payment_Link_Status [default: 'pending']
+  created_at datetime [default: `now()`]
+  updated_at datetime [default: `now()`]
+}
 
-Ref: "transaction"."id" < "transaction_fnb"."transaction_id"
-Ref: "fnb_item"."id" < "transaction_fnb"."fnb_item_id"
+Table user {
+  id int [pk, increment]
+  full_name varchar
+  email varchar
+  username varchar
+  password varchar
+  created_at datetime [default: `now()`]
+  updated_at datetime [default: `now()`]
+}
+
+Table user_refresh_token {
+  id int [pk, increment]
+  user_id int
+  token varchar
+  expires_at datetime
+  is_revoked boolean
+  user_agent varchar
+  ip_address varchar
+  created_at datetime [default: `now()`]
+}
+
+// Foreign Key Relationships
+Ref: transaction_item_unit.transaction_id > transaction.id [delete: cascade]
+Ref: transaction_item_unit.unit_item_id > unit_item.id [delete: cascade]
+Ref: transaction_item_fnb.transaction_id > transaction.id [delete: cascade]
+Ref: transaction_item_fnb.fnb_item_id > fnb_item.id [delete: cascade]
+Ref: payment_link.transaction_id > transaction.id [delete: cascade]
+Ref: user_refresh_token.user_id > user.id [delete: cascade]

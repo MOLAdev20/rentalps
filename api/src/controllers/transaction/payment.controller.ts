@@ -29,11 +29,11 @@ const endpoint = {
         },
       });
 
-      await prisma.unit_Item.updateMany({
+      await prisma.unitItem.updateMany({
         where: {
-          transactionItemUnits: {
+          RentedUnitOrder: {
             some: {
-              transaction_id: transactionId,
+              order_id: transactionId,
             },
           },
         },
@@ -117,21 +117,18 @@ const endpoint = {
   },
 
   notification: async (req: Request, res: Response) => {
-    console.log(req.body);
-    res.json(req.body);
-    // snap.transaction
-    //   .notification(req.body)
-    //   .then((statusResponse: any) => {
-    //     console.log(statusResponse);
-    //     res.json(statusResponse);
-    //   })
-    //   .catch((err: any) => {
-    //     console.log(err);
-    //     res.status(500).json({
-    //       message: "error",
-    //       err,
-    //     });
-    //   });
+    try {
+      const notification = await snap.transaction.notification(req.body);
+
+      res.json(notification);
+      console.log(notification);
+    } catch (err) {
+      console.log(err);
+      res.status(500).json({
+        message: "error",
+        err,
+      });
+    }
   },
 };
 

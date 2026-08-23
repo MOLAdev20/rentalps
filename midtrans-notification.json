@@ -1,0 +1,21 @@
+{
+  "status_code": "200",
+  "transaction_id": "15883a7b-ceed-4957-94a3-79e6edd5a238",
+  "gross_amount": "22000.00",
+  "currency": "IDR",
+  "order_id": "TRX-3-1787473233497",
+  "payment_type": "qris",
+  "signature_key": "c8df39192d4e733460345cd45222c15e7bf1ab584fc069ca9c8862abe0bba7948cd5b82adb25d6cb610fdca41a12efe98673355269ae4c4abd8d0a05c3074b56",
+  "transaction_status": "settlement",
+  "fraud_status": "accept",
+  "status_message": "Success, transaction is found",
+  "merchant_id": "G939500758",
+  "transaction_type": "off-us",
+  "issuer": "Gopay",
+  "acquirer": "airpay shopee",
+  "reference_id": "QR1787473242963vKqUOHG1u8",
+  "shopeepay_reference_number": "263863204160120398",
+  "transaction_time": "2026-08-23 15:20:42",
+  "settlement_time": "2026-08-23 15:21:26",
+  "expiry_time": "2026-08-23 15:35:42"
+}

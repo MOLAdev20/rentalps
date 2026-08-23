@@ -45,7 +45,7 @@ const endpoint = {
         "1d",
       );
 
-      await prisma.user_Refresh_Token.create({
+      await prisma.userRefreshToken.create({
         data: {
           user_id: userExists.id,
           user_agent: "Browser",
@@ -130,7 +130,7 @@ const endpoint = {
     const userId: number = Number(req.body.user_id);
 
     try {
-      const refreshToken = await prisma.user_Refresh_Token.findFirstOrThrow({
+      const refreshToken = await prisma.userRefreshToken.findFirstOrThrow({
         select: { token: true },
         where: {
           user_id: userId,
