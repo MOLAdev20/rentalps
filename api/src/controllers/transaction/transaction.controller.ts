@@ -4,7 +4,7 @@ import { prisma } from "../../lib/prisma.js";
 const endpoint = {
   getAll: async (_: Request, res: Response) => {
     try {
-      const transactions = await prisma.transaction.findMany({
+      const orders = await prisma.orders.findMany({
         // Filter status/date bisa dimasukin di sini nantinya
         select: {
           id: true,
@@ -12,14 +12,14 @@ const endpoint = {
           subtotal: true,
           total: true,
           created_at: true,
-          transactionItemUnits: {
+          rentedUnitOrder: {
             select: {
               id: true,
               play_time: true,
               sub_total: true,
               start_time: true,
               end_time: true,
-              unit_item: {
+              unitItem: {
                 select: {
                   id: true,
                   title: true,
@@ -28,12 +28,12 @@ const endpoint = {
               },
             },
           },
-          transactionItemFnbs: {
+          fnbItemOrder: {
             select: {
               id: true,
               quantity: true,
               sub_total: true,
-              fnb_item: {
+              fnbItem: {
                 select: {
                   id: true,
                   title: true,
@@ -49,7 +49,7 @@ const endpoint = {
       });
 
       // Mapping/Transformasi ringan biar nama key relasinya lebih bersih di JSON
-      const responseData = transactions.map((trx) => ({
+      const responseData = orders.map((trx) => ({
         id: trx.id,
         transaction_no: `TRX-${new Date(trx.created_at).toISOString().slice(0, 10).replace(/-/g, "")}-${String(trx.id).padStart(3, "0")}`,
         customer_name: trx.customer_name,
@@ -59,22 +59,22 @@ const endpoint = {
         total: trx.total,
         created_at: trx.created_at,
 
-        units: trx.transactionItemUnits.map((item) => ({
+        units: trx.rentedUnitOrder.map((item) => ({
           id: item.id,
-          unit_id: item.unit_item.id,
-          title: item.unit_item.title,
+          unit_id: item.unitItem.id,
+          title: item.unitItem.title,
           play_time: item.play_time,
-          rent_price: item.unit_item.rent_price,
+          rent_price: item.unitItem.rent_price,
           sub_total: item.sub_total,
           start_time: item.start_time,
           end_time: item.end_time,
         })),
 
-        fnbs: trx.transactionItemFnbs.map((item) => ({
+        fnbs: trx.fnbItemOrder.map((item) => ({
           id: item.id,
-          fnb_id: item.fnb_item.id,
-          title: item.fnb_item.title,
-          price: item.fnb_item.price,
+          fnb_id: item.fnbItem.id,
+          title: item.fnbItem.title,
+          price: item.fnbItem.price,
           quantity: item.quantity,
           sub_total: item.sub_total,
         })),
@@ -92,25 +92,25 @@ const endpoint = {
     try {
       let id: number = Number(req.params.id);
 
-      const transactionDetail = await prisma.transaction.findFirstOrThrow({
+      const ordeDetail = await prisma.orders.findFirstOrThrow({
         where: {
-          transactionItemUnits: {
+          rentedUnitOrder: {
             some: {
               unit_item_id: id,
-              unit_item: {
+              unitItem: {
                 status: "rented",
               },
             },
           },
         },
         include: {
-          transactionItemUnits: {
+          rentedUnitOrder: {
             select: {
               play_time: true,
               sub_total: true,
               start_time: true,
               end_time: true,
-              unit_item: {
+              unitItem: {
                 select: {
                   title: true,
                   rent_price: true,
@@ -119,12 +119,12 @@ const endpoint = {
               },
             },
           },
-          transactionItemFnbs: {
+          fnbItemOrder: {
             select: {
               id: true,
               quantity: true,
               sub_total: true,
-              fnb_item: {
+              fnbItem: {
                 select: {
                   id: true,
                   title: true,
@@ -134,10 +134,10 @@ const endpoint = {
               },
             },
           },
-          paymentLink: {
+          transaction: {
             select: {
-              url: true,
-              expired_at: true,
+              snap_url: true,
+              snap_expiry: true,
               status: true,
             },
             take: 1,
@@ -148,7 +148,7 @@ const endpoint = {
         },
       });
 
-      res.json(transactionDetail);
+      res.json(ordeDetail);
     } catch (err) {
       res.status(500).json({
         message: "internal-server-error",

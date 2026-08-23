@@ -35,7 +35,7 @@ onMounted(() => {
           title: el.title,
           rent_price: formatRupiah(el.rent_price),
           status: el.status,
-          rentedSession: el.transactionItemUnits,
+          rentedSession: el.rentedUnitOrder,
         });
       });
 

@@ -43,7 +43,7 @@ const qrisUrl = ref<string>("");
 const isLoadingQris = ref(false);
 
 // ================= Data Sesi =================
-const transactionId = ref<number>(0);
+const orderId = ref<number>(0);
 const customerName = ref<string>("");
 const rentedUnit = ref<string>("");
 const rawStartTime = ref<dayjs.Dayjs>(dayjs());
@@ -82,7 +82,7 @@ function showToast(message: string) {
 }
 
 const modifyFnbQty = async (orderId: number, type: "increase" | "decrease") =>
-  axios.patch(`transaction/fnb-item/change-qty/${orderId}/${type}`, () => {});
+  axios.patch(`order/fnb-item/change-qty/${orderId}/${type}`, () => {});
 
 async function incrementQty(item: OrderedFnbItem) {
   try {
@@ -102,9 +102,9 @@ async function decrementQty(item: OrderedFnbItem) {
 
 const pickFnbItem = async (catalogItem: FnbItem) => {
   axios.post(
-    "transaction/fnb-item/add",
+    "order/fnb-item/add",
     {
-      transaction_id: transactionId.value,
+      order_id: orderId.value,
       fnb_id: catalogItem.id,
     },
     (response: any) => {
@@ -116,7 +116,7 @@ const pickFnbItem = async (catalogItem: FnbItem) => {
       } else {
         fnbItems.value.push({
           ...catalogItem,
-          id: response.data.newFnbTransaction.id,
+          id: response.data.newFnbOrder.id,
           fnb_item_id: catalogItem.id,
           qty: 1,
         });
@@ -138,7 +138,7 @@ function removeFnbItem(id: number) {
   }).then((result) => {
     if (result) {
       fnbItems.value = fnbItems.value.filter((i) => i.id !== id);
-      axios.delete("transaction/fnb-item/" + id, () => {});
+      axios.delete("order/fnb-item/" + id, () => {});
     }
   });
 }
@@ -159,44 +159,45 @@ onMounted(async () => {
   document.title = "Detail sewa |  Rental";
 
   axios.get(
-    `transaction/unit/${props.id}`,
+    `order/by-unit/${props.id}`,
     (response: any) => {
-      transactionId.value = response.data.id;
+      orderId.value = response.data.id;
       customerName.value = response.data.customer_name;
-      rentedUnit.value = response.data.transactionItemUnits[0].unit_item.title;
-      rawStartTime.value = response.data.transactionItemUnits[0].start_time;
-      rawEndTime.value = response.data.transactionItemUnits[0].end_time;
+      rentedUnit.value = response.data.rentedUnitOrder[0].unitItem.title;
+      rawStartTime.value = response.data.rentedUnitOrder[0].start_time;
+      rawEndTime.value = response.data.rentedUnitOrder[0].end_time;
 
       if (response.data.payment_method != "pending_payment") {
         paymentMethod.value = response.data.payment_method;
       }
 
       if (paymentMethod.value === "qris") {
-        paymentLink.value = response.data.paymentLink[0];
+        paymentLink.value = response.data.transaction[0];
         qrisUrl.value = paymentLink.value.url;
 
         paymentSelectionMode.value = false;
       }
 
-      playDuration.value = response.data.transactionItemUnits[0].play_time;
+      playDuration.value = response.data.rentedUnitOrder[0].play_time;
       rentPricePerHour.value =
-        response.data.transactionItemUnits[0].unit_item.rent_price;
+        response.data.rentedUnitOrder[0].unitItem.rent_price;
 
-      const transactionFnb = response.data.transactionItemFnbs;
-      transactionFnb.forEach((item: any) => {
+      const fnbItemOrder = response.data.fnbItemOrder;
+      fnbItemOrder.forEach((item: any) => {
         fnbItems.value.push({
           id: item.id,
-          fnb_item_id: item.fnb_item.id,
-          name: item.fnb_item.title,
-          price: item.fnb_item.price,
+          fnb_item_id: item.fnbItem.id,
+          name: item.fnbItem.title,
+          price: item.fnbItem.price,
           qty: item.quantity,
         });
       });
     },
-    () => {
-      router.replace({
-        name: "NotFound",
-      });
+    (err: any) => {
+      console.log(err);
+      // router.replace({
+      //   name: "NotFound",
+      // });
     },
   );
 });
@@ -220,7 +221,7 @@ const handlePayment = async () => {
         axios.post(
           "transaction/payment/generate-qris",
           {
-            transaction_id: transactionId.value,
+            transaction_id: orderId.value,
           },
           (response: any) => {
             const redirectUrl = response.data.url;
@@ -243,7 +244,7 @@ const handlePayment = async () => {
         axios.post(
           `transaction/payment/proceed-payment`,
           {
-            transaction_id: transactionId.value,
+            transaction_id: orderId.value,
             payment_method: paymentMethod.value,
           },
           () => {

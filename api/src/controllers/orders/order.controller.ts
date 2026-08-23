@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { prisma } from "../lib/prisma.js";
+import { prisma } from "../../lib/prisma.js";
 
 interface SelectedUnitItem {
   unit_item: number;
@@ -113,11 +113,11 @@ const endpoint = {
           subtotal: subTotal,
           total: subTotal,
 
-          RentedUnitOrder: {
+          rentedUnitOrder: {
             create: transactionUnit,
           },
 
-          FnbItemOrder: {
+          fnbItemOrder: {
             create: transactionFnb,
           },
         },
@@ -135,6 +135,75 @@ const endpoint = {
       res.status(500).json({
         message: "internal-server-error",
         err: err.message,
+      });
+    }
+  },
+
+  getByRentedUnit: async (req: Request, res: Response) => {
+    try {
+      let id: number = Number(req.params.unit_id);
+
+      const orderDetail = await prisma.orders.findFirstOrThrow({
+        where: {
+          rentedUnitOrder: {
+            some: {
+              unit_item_id: id,
+              unitItem: {
+                status: "rented",
+              },
+            },
+          },
+        },
+        include: {
+          rentedUnitOrder: {
+            select: {
+              play_time: true,
+              sub_total: true,
+              start_time: true,
+              end_time: true,
+              unitItem: {
+                select: {
+                  title: true,
+                  rent_price: true,
+                  status: true,
+                },
+              },
+            },
+          },
+          fnbItemOrder: {
+            select: {
+              id: true,
+              quantity: true,
+              sub_total: true,
+              fnbItem: {
+                select: {
+                  id: true,
+                  title: true,
+                  description: true,
+                  price: true,
+                },
+              },
+            },
+          },
+          transaction: {
+            select: {
+              snap_url: true,
+              snap_expiry: true,
+              status: true,
+            },
+            take: 1,
+            orderBy: {
+              id: "desc",
+            },
+          },
+        },
+      });
+
+      res.json(orderDetail);
+    } catch (err) {
+      res.status(500).json({
+        message: "internal-server-error",
+        detail: err,
       });
     }
   },
