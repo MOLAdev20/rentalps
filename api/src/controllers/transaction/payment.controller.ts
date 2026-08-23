@@ -13,6 +13,30 @@ interface MidtransSnapResponse {
   redirect_url: string;
 }
 
+const generateTransactionNo = async (): Promise<string> => {
+  const now = new Date();
+
+  // Format Tanggal (DDMMYYYY)
+  const day = String(now.getDate()).padStart(2, "0");
+  const month = String(now.getMonth() + 1).padStart(2, "0"); // Month mulai dari 0
+  const year = now.getFullYear();
+  const dateStr = `${day}${month}${year}`;
+
+  // urutan terbaru
+  const latestOrder = await prisma.transaction.findFirst({
+    orderBy: {
+      id: "desc",
+    },
+  });
+
+  let order_no = 0;
+  if (latestOrder) {
+    order_no = latestOrder.id + 1;
+  }
+
+  return `ORD-${dateStr}-${order_no}`; // Hasil: ORD-23082026-1
+};
+
 const endpoint = {
   proceedPayment: async (req: Request, res: Response) => {
     try {
@@ -54,19 +78,19 @@ const endpoint = {
 
   generateQris: async (req: Request, res: Response) => {
     try {
-      const transactionId = Number(req.body.transaction_id);
+      const orderId = Number(req.body.transaction_id);
 
-      // 1. Get Transaction Detail
-      const transaction = await prisma.transaction.findUniqueOrThrow({
-        where: { id: transactionId },
+      // 1. Get Order Detail
+      const order = await prisma.orders.findUniqueOrThrow({
+        where: { id: orderId },
       });
 
       // 2. Request Snap transaction for QRIS only
       const snapMinutesDuration = 15;
       const parameter = {
         transaction_details: {
-          gross_amount: transaction.total,
-          order_id: `TRX-${transaction.id}-${Date.now()}`,
+          gross_amount: order.total,
+          order_id: await generateTransactionNo(),
         },
         enabled_payments: ["other_qris"],
         expiry: {
@@ -81,26 +105,20 @@ const endpoint = {
       const snapExpiredAt = new Date(
         Date.now() + snapMinutesDuration * 60 * 1000,
       );
-      const paymentLink = await prisma.payment_Link.create({
+      const transaction = await prisma.transaction.create({
         data: {
-          transaction_id: transaction.id,
-          url: snapResponse.redirect_url,
-          expired_at: snapExpiredAt,
-        },
-      });
-
-      await prisma.transaction.update({
-        where: {
-          id: transaction.id,
-        },
-        data: {
+          order_id: order.id,
+          transaction_no: await generateTransactionNo(),
+          amount: order.total,
           payment_method: "qris",
+          snap_url: snapResponse.redirect_url,
+          snap_expiry: snapExpiredAt,
         },
       });
 
       res.json({
         message: "qris-generated",
-        data: paymentLink,
+        data: transaction,
       });
     } catch (err) {
       const midtransError = err as {

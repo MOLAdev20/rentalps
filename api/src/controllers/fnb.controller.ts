@@ -19,7 +19,7 @@ const endpoint = {
 
   create: async (req: Request<{}, {}, RegisterInput>, res: Response) => {
     try {
-      await prisma.fnb_Item.create({
+      await prisma.fnBItem.create({
         data: {
           title: req.body.title,
           price: req.body.price,
