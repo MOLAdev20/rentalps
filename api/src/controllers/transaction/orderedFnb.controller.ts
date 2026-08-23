@@ -3,36 +3,35 @@ import { prisma } from "../../lib/prisma.js";
 
 const endpoint = {
   addToTransaction: async (req: Request, res: Response) => {
-    const transactionId = Number(req.body.transaction_id);
+    const orderId = Number(req.body.order_id);
     const fnbId = req.body.fnb_id;
 
     try {
-      const selectedFnb = await prisma.fnb_Item.findUniqueOrThrow({
+      const selectedFnb = await prisma.fnBItem.findUniqueOrThrow({
         where: { id: fnbId },
       });
-      const existingFnbTransaction =
-        await prisma.transaction_Item_Fnb.findFirst({
-          where: {
-            transaction_id: transactionId,
-            fnb_item_id: fnbId,
-          },
-        });
+      const existingFnbOrder = await prisma.fnBItemOrder.findFirst({
+        where: {
+          order_id: orderId,
+          fnb_item_id: fnbId,
+        },
+      });
 
       let newFnbTransaction: any;
-      if (!existingFnbTransaction) {
-        newFnbTransaction = await prisma.transaction_Item_Fnb.create({
+      if (!existingFnbOrder) {
+        newFnbTransaction = await prisma.fnBItemOrder.create({
           data: {
-            transaction_id: transactionId,
+            order_id: orderId,
             fnb_item_id: fnbId,
             quantity: 1,
             sub_total: selectedFnb.price,
           },
         });
       } else {
-        const oldQuantity = existingFnbTransaction.quantity;
-        newFnbTransaction = await prisma.transaction_Item_Fnb.update({
+        const oldQuantity = existingFnbOrder.quantity;
+        newFnbTransaction = await prisma.fnBItemOrder.update({
           where: {
-            id: existingFnbTransaction.id,
+            id: existingFnbOrder.id,
           },
           data: {
             quantity: oldQuantity + 1,
@@ -55,7 +54,7 @@ const endpoint = {
     const changeType = req.params.changeType;
 
     try {
-      const newFnbTransaction = await prisma.transaction_Item_Fnb.update({
+      const newFnbOrder = await prisma.fnBItemOrder.update({
         where: { id },
         data: {
           quantity: {
@@ -64,7 +63,7 @@ const endpoint = {
         },
       });
       res.json({
-        newFnbTransaction,
+        newFnbOrder,
       });
     } catch (err) {
       res.status(500).json({
@@ -74,11 +73,11 @@ const endpoint = {
   },
 
   removeFromTransaction: async (req: Request, res: Response) => {
-    const fnbTransactionId = Number(req.params.id);
+    const fnbItemOrderId = Number(req.params.id);
 
     try {
-      await prisma.transaction_Item_Fnb.delete({
-        where: { id: fnbTransactionId },
+      await prisma.fnBItemOrder.delete({
+        where: { id: fnbItemOrderId },
       });
       res.json({
         message: "fnb-transaction-deleted",

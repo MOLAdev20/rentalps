@@ -5,9 +5,9 @@ import type { RegisterInput } from "../schemas/unit.schema.js";
 const endpoint = {
   getAll: async (_: Request, res: Response) => {
     try {
-      const rawUnit = await prisma.unit_Item.findMany({
+      const rawUnit = await prisma.unitItem.findMany({
         include: {
-          transactionItemUnits: {
+          RentedUnitOrder: {
             where: {
               status: "playing",
             },
@@ -20,14 +20,14 @@ const endpoint = {
       });
 
       const unit = rawUnit.map((item) => {
-        let transactionItemUnits: any = {};
-        if (item.transactionItemUnits.length != 0) {
-          transactionItemUnits = item.transactionItemUnits[0];
+        let rentedUnitOrder: any = {};
+        if (item.RentedUnitOrder.length != 0) {
+          rentedUnitOrder = item.RentedUnitOrder[0];
         }
 
         return {
           ...item,
-          transactionItemUnits: transactionItemUnits,
+          rentedUnitOrder: rentedUnitOrder,
         };
       });
 
@@ -49,7 +49,7 @@ const endpoint = {
     try {
       const id: number = Number(req.params.id);
 
-      const unit = await prisma.unit_Item.findUniqueOrThrow({
+      const unit = await prisma.unitItem.findUniqueOrThrow({
         where: { id },
       });
 
@@ -65,7 +65,7 @@ const endpoint = {
     try {
       const id: number = Number(req.params.id);
 
-      const unit = await prisma.unit_Item.findUniqueOrThrow({
+      const unit = await prisma.unitItem.findUniqueOrThrow({
         where: { id, status: "available" },
       });
 
@@ -79,7 +79,7 @@ const endpoint = {
 
   create: async (req: Request<{}, {}, RegisterInput>, res: Response) => {
     try {
-      await prisma.unit_Item.create({
+      await prisma.unitItem.create({
         data: {
           title: req.body.title,
           rent_price: req.body.rent_price,

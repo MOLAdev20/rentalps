@@ -29,11 +29,11 @@ const endpoint = {
         },
       });
 
-      await prisma.unit_Item.updateMany({
+      await prisma.unitItem.updateMany({
         where: {
-          transactionItemUnits: {
+          RentedUnitOrder: {
             some: {
-              transaction_id: transactionId,
+              order_id: transactionId,
             },
           },
         },

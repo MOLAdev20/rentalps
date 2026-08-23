@@ -173,7 +173,7 @@ const proceedPayment = async () => {
     };
 
     axios.post(
-      "transaction",
+      "order",
       payload,
       (response: any) => {
         if (response.status === 200)

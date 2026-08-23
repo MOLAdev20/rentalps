@@ -5,6 +5,5 @@ const route = Router();
 
 route.get("/", transactionController.getAll);
 route.get("/unit/:id", transactionController.getDetail); // get transaction by unit
-route.post("/", transactionController.create);
 
 export default route;
