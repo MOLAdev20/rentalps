@@ -12,53 +12,53 @@ datasource db {
   provider = "mysql"
 }
 
-enum Unit_Item_Status {
+enum UnitItemStatus {
   available
   rented
   maintainance
 }
 
-enum Transaction_Payment_Method {
+enum TransactionPaymentMethod {
   pending_payment
   qris
   cash
 }
 
-enum Transaction_Status {
+enum OrderStatus {
   pending
   complete
   cancel
 }
 
-enum Payment_Link_Status {
+enum TransactionStatus {
   pending
   complete
   cancel
   expired
 }
 
-enum Rented_Unit_Status {
+enum RentedUnitStatus {
   playing
   finished
   cancel
 }
 
-model Unit_Item {
+model UnitItem {
   id                   Int                     @id @default(autoincrement())
   title                String
   description          String                  @db.Text
   rent_price           Float
-  status               Unit_Item_Status        @default(available)
+  status               UnitItemStatus        @default(available)
   created_at           DateTime                @default(now())
   updated_at           DateTime                @updatedAt
   
-  transactionItemUnits Transaction_Item_Unit[]
+  RentedUnitOrder      RentedUnitOrder[]
 
   // Berikan nama asli tabel
   @@map("unit_item")
 }
 
-model Fnb_Item {
+model FnBItem {
   id                  Int                    @id @default(autoincrement())
   title               String
   description         String                 @db.Text
@@ -66,69 +66,72 @@ model Fnb_Item {
   created_at          DateTime               @default(now())
   updated_at          DateTime               @updatedAt
 
-  transactionItemFnbs Transaction_Item_Fnb[]
+  fnbItemOrder FnBItemOrder[]
 
   @@map("fnb_item")
 }
 
-model Transaction {
+model Orders {
   id              Int           @id @default(autoincrement())
+  order_no        String        @unique
   customer_name   String
   subtotal        Float
   total           Float
-  payment_method  Transaction_Payment_Method @default(pending_payment)
-  status          Transaction_Status @default(pending)
+  status          OrderStatus @default(pending)
   created_at      DateTime      @default(now())
   updated_at      DateTime      @default(now())
 
-  transactionItemUnits Transaction_Item_Unit[]
-  transactionItemFnbs  Transaction_Item_Fnb[]
-  paymentLink Payment_Link[]
+  RentedUnitOrder RentedUnitOrder[]
+  FnbItemOrder    FnBItemOrder[]
+  transaction     Transaction[]
 
-  @@map("transaction")
+  @@map("orders")
 }
 
-model Transaction_Item_Unit {
+model RentedUnitOrder {
   id             Int      @id @default(autoincrement())
-  transaction_id Int // relasi ke tabel transaksi `Transaction`
+  order_id       Int // relasi ke tabel transaksi `Transaction`
   unit_item_id   Int // relasi ke tabel unit_item `Unit_Item`
   play_time      Float
   sub_total      Float
   start_time     DateTime @default(now())
   end_time       DateTime
-  status        Rented_Unit_Status @default(playing)
+  status         RentedUnitStatus @default(playing)
 
-  transaction Transaction @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
-  unit_item   Unit_Item   @relation(fields: [unit_item_id], references: [id], onDelete: Cascade)
+  orders         Orders      @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  unitItem       UnitItem   @relation(fields: [unit_item_id], references: [id], onDelete: Cascade)
 
-  @@map("transaction_item_unit")
+  @@map("rented_unit_order")
 }
 
-model Transaction_Item_Fnb {
+model FnBItemOrder {
   id             Int   @id @default(autoincrement())
-  transaction_id Int // relasi ke tabel `Transaction`
+  order_id       Int // relasi ke tabel `Transaction`
   fnb_item_id    Int // relasi ke tabel `Fnb_Item`
   quantity       Int
   sub_total      Float
 
-  transaction Transaction @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
-  fnb_item    Fnb_Item    @relation(fields: [fnb_item_id], references: [id], onDelete: Cascade)
+  orders Orders  @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  fnbItem        FnBItem    @relation(fields: [fnb_item_id], references: [id], onDelete: Cascade)
 
-  @@map("transaction_item_fnb")
+  @@map("fnb_item_order")
 }
 
-model Payment_Link {
-  id Int @id @default(autoincrement())
-  transaction_id Int
-  url String
-  expired_at DateTime @default(now())
-  status Payment_Link_Status @default(pending)
-  created_at      DateTime      @default(now())
-  updated_at      DateTime      @default(now())
+model Transaction {
+  id              Int                        @id @default(autoincrement())
+  order_id        Int                        @unique
+  transaction_no  String
+  payment_method  TransactionPaymentMethod @default(pending_payment)
+  amount          Float
+  snap_url        String?
+  snap_expiry     DateTime?
+  status          TransactionStatus         @default(pending)
+  created_at      DateTime                   @default(now())
+  updated_at      DateTime                   @default(now())
 
-  transaction Transaction @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
+  orders Orders @relation(fields: [order_id], references: [id], onDelete: Cascade)
   
-  @@map("payment_link")
+  @@map("order_transaction")
 }
 
 model User {
@@ -140,11 +143,11 @@ model User {
   created_at DateTime @default(now())
   updated_at DateTime @default(now())
 
-  refreshToken User_Refresh_Token[]
+  refreshToken UserRefreshToken[]
   @@map("user")
 }
 
-model User_Refresh_Token {
+model UserRefreshToken {
   id Int @id @default(autoincrement())
   user_id Int
   token String
