@@ -12,7 +12,7 @@ const endpoint = {
           subtotal: true,
           total: true,
           created_at: true,
-          RentedUnitOrder: {
+          rentedUnitOrder: {
             select: {
               id: true,
               play_time: true,
@@ -28,7 +28,7 @@ const endpoint = {
               },
             },
           },
-          FnbItemOrder: {
+          fnbItemOrder: {
             select: {
               id: true,
               quantity: true,
@@ -59,7 +59,7 @@ const endpoint = {
         total: trx.total,
         created_at: trx.created_at,
 
-        units: trx.RentedUnitOrder.map((item) => ({
+        units: trx.rentedUnitOrder.map((item) => ({
           id: item.id,
           unit_id: item.unitItem.id,
           title: item.unitItem.title,
@@ -70,7 +70,7 @@ const endpoint = {
           end_time: item.end_time,
         })),
 
-        fnbs: trx.FnbItemOrder.map((item) => ({
+        fnbs: trx.fnbItemOrder.map((item) => ({
           id: item.id,
           fnb_id: item.fnbItem.id,
           title: item.fnbItem.title,
@@ -94,7 +94,7 @@ const endpoint = {
 
       const ordeDetail = await prisma.orders.findFirstOrThrow({
         where: {
-          RentedUnitOrder: {
+          rentedUnitOrder: {
             some: {
               unit_item_id: id,
               unitItem: {
@@ -104,7 +104,7 @@ const endpoint = {
           },
         },
         include: {
-          RentedUnitOrder: {
+          rentedUnitOrder: {
             select: {
               play_time: true,
               sub_total: true,
@@ -119,7 +119,7 @@ const endpoint = {
               },
             },
           },
-          FnbItemOrder: {
+          fnbItemOrder: {
             select: {
               id: true,
               quantity: true,

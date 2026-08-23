@@ -2,7 +2,7 @@ import { type Request, type Response } from "express";
 import { prisma } from "../../lib/prisma.js";
 
 const endpoint = {
-  addToTransaction: async (req: Request, res: Response) => {
+  addToOrder: async (req: Request, res: Response) => {
     const orderId = Number(req.body.order_id);
     const fnbId = req.body.fnb_id;
 
@@ -17,9 +17,9 @@ const endpoint = {
         },
       });
 
-      let newFnbTransaction: any;
+      let newFnbOrder: any;
       if (!existingFnbOrder) {
-        newFnbTransaction = await prisma.fnBItemOrder.create({
+        newFnbOrder = await prisma.fnBItemOrder.create({
           data: {
             order_id: orderId,
             fnb_item_id: fnbId,
@@ -29,7 +29,7 @@ const endpoint = {
         });
       } else {
         const oldQuantity = existingFnbOrder.quantity;
-        newFnbTransaction = await prisma.fnBItemOrder.update({
+        newFnbOrder = await prisma.fnBItemOrder.update({
           where: {
             id: existingFnbOrder.id,
           },
@@ -40,11 +40,12 @@ const endpoint = {
         });
       }
       res.json({
-        newFnbTransaction,
+        newFnbOrder,
       });
     } catch (err) {
       res.status(500).json({
         message: "error-update-data",
+        err: err,
       });
     }
   },

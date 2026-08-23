@@ -7,7 +7,7 @@ const endpoint = {
     try {
       const rawUnit = await prisma.unitItem.findMany({
         include: {
-          RentedUnitOrder: {
+          rentedUnitOrder: {
             where: {
               status: "playing",
             },
@@ -21,8 +21,8 @@ const endpoint = {
 
       const unit = rawUnit.map((item) => {
         let rentedUnitOrder: any = {};
-        if (item.RentedUnitOrder.length != 0) {
-          rentedUnitOrder = item.RentedUnitOrder[0];
+        if (item.rentedUnitOrder.length != 0) {
+          rentedUnitOrder = item.rentedUnitOrder[0];
         }
 
         return {

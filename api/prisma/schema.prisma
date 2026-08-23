@@ -52,7 +52,7 @@ model UnitItem {
   created_at           DateTime                @default(now())
   updated_at           DateTime                @updatedAt
   
-  RentedUnitOrder      RentedUnitOrder[]
+  rentedUnitOrder      RentedUnitOrder[]
 
   // Berikan nama asli tabel
   @@map("unit_item")
@@ -81,8 +81,8 @@ model Orders {
   created_at      DateTime      @default(now())
   updated_at      DateTime      @default(now())
 
-  RentedUnitOrder RentedUnitOrder[]
-  FnbItemOrder    FnBItemOrder[]
+  rentedUnitOrder RentedUnitOrder[]
+  fnbItemOrder    FnBItemOrder[]
   transaction     Transaction[]
 
   @@map("orders")

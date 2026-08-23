@@ -15,8 +15,8 @@ route.use("/auth", auth);
 route.use("/unit", authMiddleware, unit);
 route.use("/fnb", fnb);
 route.use("/order", authMiddleware, order);
+route.use("/order/fnb-item", authMiddleware, orderedFnb);
 route.use("/transaction/payment", payment);
-route.use("/transaction/fnb-item", authMiddleware, orderedFnb);
 route.use("/transaction/report", authMiddleware, transactionReport);
 route.use("/transaction", authMiddleware, transaction);
 
