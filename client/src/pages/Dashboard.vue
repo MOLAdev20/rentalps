@@ -3,7 +3,7 @@ import BaseLayout from "../components/__Layout.vue";
 
 import { onBeforeUnmount, ref } from "vue";
 
-document.title = "Dashboard |  Rental";
+document.title = "Dashboard | Rent.Play!";
 
 const isModalOpen = ref(false);
 const isToastVisible = ref(false);

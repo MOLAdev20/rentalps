@@ -23,10 +23,10 @@ const generateOrderNo = async (): Promise<string> => {
   const dateStr = `${day}${month}${year}`;
 
   // urutan terbaru
-  const latestOrder: number = await prisma.transaction.count({
+  const latestOrder: number = await prisma.orders.count({
     where: {
-      created_at: {
-        gte: new Date(now.getDate(), now.getMonth(), now.getFullYear()),
+      order_no: {
+        startsWith: `ORD-${dateStr}-`,
       },
     },
   });

@@ -2,7 +2,7 @@
 
 Aplikasi _point of sale_ (POS) untuk operasional rental PlayStation. Aplikasi ini membantu administrator mengelola unit PS, mencatat sesi sewa dan pesanan makanan/minuman (FnB), memproses pembayaran, serta melihat laporan transaksi dan keuangan.
 
-![Diagram basis data](./schema.png)
+![Diagram basis data](./display.png)
 
 ## Fitur utama
 

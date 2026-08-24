@@ -160,7 +160,7 @@ const grandTotal = computed(() => unitRentTotal.value + fnbTotal.value);
 
 // ================= Lifecycle =================
 onMounted(() => {
-  document.title = "Detail sewa |  Rental";
+  document.title = "Detail sewa | Rent.Play!";
 
   axios.get(
     `order/by-unit/${props.id}`,

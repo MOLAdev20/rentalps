@@ -266,7 +266,7 @@ const renderCharts = () => {
 };
 
 onMounted(() => {
-  document.title = "Laporan Keuangan |  Rental";
+  document.title = "Laporan Keuangan | Rent.Play!";
   window.addEventListener("click", closeFilterOnOutside);
   fetchFinancialData();
 });

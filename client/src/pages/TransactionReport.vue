@@ -50,7 +50,7 @@ interface TransactionLogs {
 const transactionData = ref<TransactionLogs[]>([]);
 
 onMounted(() => {
-  document.title = "Laporan Transaksi |  Rental";
+  document.title = "Laporan Transaksi | Rent.Play!";
 
   axios.get(
     "transaction",
