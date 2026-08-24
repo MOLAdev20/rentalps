@@ -23,16 +23,15 @@ const generateOrderNo = async (): Promise<string> => {
   const dateStr = `${day}${month}${year}`;
 
   // urutan terbaru
-  const latestOrder = await prisma.transaction.findFirst({
-    orderBy: {
-      id: "desc",
+  const latestOrder: number = await prisma.transaction.count({
+    where: {
+      created_at: {
+        gte: new Date(now.getDate(), now.getMonth(), now.getFullYear()),
+      },
     },
   });
 
-  let order_no = 0;
-  if (latestOrder) {
-    order_no = latestOrder.id + 1;
-  }
+  const order_no = latestOrder + 1;
 
   return `ORD-${dateStr}-${order_no}`; // Hasil: ORD-23082026-1
 };
@@ -134,7 +133,7 @@ const endpoint = {
     } catch (err: any) {
       res.status(500).json({
         message: "internal-server-error",
-        err: err.message,
+        err: err,
       });
     }
   },
@@ -145,6 +144,7 @@ const endpoint = {
 
       const orderDetail = await prisma.orders.findFirstOrThrow({
         where: {
+          status: "pending",
           rentedUnitOrder: {
             some: {
               unit_item_id: id,
@@ -187,6 +187,7 @@ const endpoint = {
           },
           transaction: {
             select: {
+              payment_method: true,
               snap_url: true,
               snap_expiry: true,
               status: true,

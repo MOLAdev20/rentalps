@@ -31,10 +31,14 @@ const router = useRouter();
 const axios = useAxios();
 const { alert, confirm } = useAlertDialog();
 
-const paymentMethod = ref("");
-const paymentLink = ref<{ url: string; expired_at: string; status: string }>({
-  url: "",
-  expired_at: "",
+const paymentMethod = ref<string>("");
+const paymentLink = ref<{
+  snap_url: string;
+  snap_expiry: string;
+  status: string;
+}>({
+  snap_url: "",
+  snap_expiry: "",
   status: "",
 });
 const paymentSelectionMode = ref<boolean>(true);
@@ -155,32 +159,38 @@ const fnbTotal = computed(() =>
 const grandTotal = computed(() => unitRentTotal.value + fnbTotal.value);
 
 // ================= Lifecycle =================
-onMounted(async () => {
+onMounted(() => {
   document.title = "Detail sewa |  Rental";
 
   axios.get(
     `order/by-unit/${props.id}`,
     (response: any) => {
-      orderId.value = response.data.id;
-      customerName.value = response.data.customer_name;
-      rentedUnit.value = response.data.rentedUnitOrder[0].unitItem.title;
-      rawStartTime.value = response.data.rentedUnitOrder[0].start_time;
-      rawEndTime.value = response.data.rentedUnitOrder[0].end_time;
+      const { id, customer_name, rentedUnitOrder, transaction } = response.data;
 
-      if (response.data.payment_method != "pending_payment") {
-        paymentMethod.value = response.data.payment_method;
+      orderId.value = id;
+      customerName.value = customer_name;
+      rentedUnit.value = rentedUnitOrder[0].unitItem.title;
+      rawStartTime.value = rentedUnitOrder[0].start_time;
+      rawEndTime.value = rentedUnitOrder[0].end_time;
+
+      console.log(response.data);
+
+      if (transaction.length > 0) {
+        if (transaction[0].payment_method != "pending_payment") {
+          paymentMethod.value = transaction[0].payment_method;
+        }
+
+        console.log(paymentMethod.value);
+        if (paymentMethod.value === "qris") {
+          paymentLink.value = transaction[0];
+          qrisUrl.value = paymentLink.value.snap_url;
+
+          paymentSelectionMode.value = false;
+        }
       }
 
-      if (paymentMethod.value === "qris") {
-        paymentLink.value = response.data.transaction[0];
-        qrisUrl.value = paymentLink.value.url;
-
-        paymentSelectionMode.value = false;
-      }
-
-      playDuration.value = response.data.rentedUnitOrder[0].play_time;
-      rentPricePerHour.value =
-        response.data.rentedUnitOrder[0].unitItem.rent_price;
+      playDuration.value = rentedUnitOrder[0].play_time;
+      rentPricePerHour.value = rentedUnitOrder[0].unitItem.rent_price;
 
       const fnbItemOrder = response.data.fnbItemOrder;
       fnbItemOrder.forEach((item: any) => {
@@ -221,20 +231,23 @@ const handlePayment = async () => {
         axios.post(
           "transaction/payment/generate-qris",
           {
-            transaction_id: orderId.value,
+            order_id: orderId.value,
           },
           (response: any) => {
-            const redirectUrl = response.data.url;
+            const { snap_url } = response.data.data;
 
-            if (!redirectUrl) {
+            console.log(response.data.data.snap_url);
+
+            if (!snap_url) {
               throw new Error("Snap URL tidak ditemukan");
             }
 
-            qrisUrl.value = redirectUrl;
+            qrisUrl.value = snap_url;
             showQrisModal.value = true;
             paymentSelectionMode.value = false;
           },
-          () => {
+          (err: any) => {
+            console.log(err);
             showToast("Gagal membuat QRIS. Silakan coba lagi.");
           },
         );
@@ -244,7 +257,7 @@ const handlePayment = async () => {
         axios.post(
           `transaction/payment/proceed-payment`,
           {
-            transaction_id: orderId.value,
+            order_id: orderId.value,
             payment_method: paymentMethod.value,
           },
           () => {
