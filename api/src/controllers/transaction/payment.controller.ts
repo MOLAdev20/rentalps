@@ -33,7 +33,7 @@ const generateTransactionNo = async (): Promise<string> => {
 
   const order_no = latestOrder + 1;
 
-  return `ORD-${dateStr}-${order_no}`; // Hasil: ORD-23082026-1
+  return `TRX-${dateStr}-${order_no}`; // Hasil: ORD-23082026-1
 };
 
 const endpoint = {
@@ -105,12 +105,13 @@ const endpoint = {
         where: { id: orderId },
       });
 
+      const orderNumber = await generateTransactionNo();
       // 2. Request Snap transaction for QRIS only
       const snapMinutesDuration = 15;
       const parameter = {
         transaction_details: {
           gross_amount: order.total,
-          order_id: await generateTransactionNo(),
+          order_id: orderNumber,
         },
         enabled_payments: ["other_qris"],
         expiry: {
@@ -128,7 +129,7 @@ const endpoint = {
       const transaction = await prisma.transaction.create({
         data: {
           order_id: order.id,
-          transaction_no: await generateTransactionNo(),
+          transaction_no: orderNumber,
           amount: order.total,
           payment_method: "qris",
           snap_url: snapResponse.redirect_url,
@@ -158,8 +159,70 @@ const endpoint = {
     try {
       const notification = await snap.transaction.notification(req.body);
 
-      res.json(notification);
-      console.log(notification);
+      // 1. Cari data transaksi + dapet ID dari relasi-relasinya
+      const trxData = await prisma.transaction.findFirst({
+        where: { transaction_no: notification.order_id },
+        select: {
+          id: true,
+          transaction_no: true,
+          orders: {
+            select: {
+              order_no: true,
+              rentedUnitOrder: {
+                select: {
+                  id: true,
+                  unit_item_id: true, // ID unit PS fisiknya
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // 2. Validasi
+      if (!trxData) {
+        throw new Error(`Transaction ${notification.order_id} not found`);
+      }
+
+      // Extract list ID unit yang disewa & ID PS fisiknya
+      const rentedUnitItemIds = trxData.orders.rentedUnitOrder.map(
+        (item) => item.id,
+      );
+
+      const unitItemIds = trxData.orders.rentedUnitOrder.map(
+        (item) => item.unit_item_id,
+      );
+
+      // 3. Eksekusi update 4 tabel sekaligus pake $transaction
+      await prisma.$transaction([
+        // A. Update status transaksi ini
+        prisma.transaction.update({
+          where: { id: trxData.id },
+          data: { status: "complete" },
+        }),
+
+        // B. Update status order induk
+        prisma.orders.update({
+          where: { order_no: trxData.orders.order_no },
+          data: { status: "complete" },
+        }),
+
+        // C. Update status item PS yang dipesan
+        prisma.rentedUnitOrder.updateMany({
+          where: { id: { in: rentedUnitItemIds } },
+          data: { status: "finished" },
+        }),
+
+        // D. Update status fisik unit PS-nya biar bisa disewa lagi
+        prisma.unitItem.updateMany({
+          where: { id: { in: unitItemIds } },
+          data: { status: "available" },
+        }),
+      ]);
+
+      res.json({
+        message: "notification-processed",
+      });
     } catch (err) {
       console.log(err);
       res.status(500).json({
