@@ -3,7 +3,6 @@ import { onMounted, ref } from "vue";
 import toast, { Toaster } from "vue3-hot-toast";
 
 import BaseLayout from "../components/__Layout.vue";
-import { useRouter } from "vue-router";
 import { useAxios } from "../composables/useAxios.ts";
 
 interface Unit {
@@ -24,15 +23,13 @@ const unitData = ref<Unit[]>([]);
 const isModalOpen = ref(false);
 
 onMounted(() => {
-  document.title = "Sewa |  Rental";
+  document.title = "Sewa | Rent.Play!";
   fetchData();
 });
-
-const router = useRouter();
 const axios = useAxios();
 
 const fetchData = async () => {
-  await axios.get(
+  axios.get(
     "unit",
     (response: any) => {
       unitData.value = response.data.unit;
@@ -45,22 +42,25 @@ const fetchData = async () => {
   );
 };
 
-const saveData = async () => {
-  try {
-    const response = await Axios.post("http://localhost:8080/unit", {
+const saveData = () => {
+  axios.post(
+    "unit",
+    {
       title: title.value,
       description: description.value,
       rent_price: rent_price.value,
-    });
-
-    if (response.data.message == "unit-created") {
-      toast.success("Data berhasil disimpan");
-      isModalOpen.value = false;
-      fetchData();
-    }
-  } catch (err) {
-    toast.error("Kesalahan. Harap coba lagi");
-  }
+    },
+    (response: any) => {
+      if (response.data.message == "unit-created") {
+        toast.success("Data berhasil disimpan");
+        isModalOpen.value = false;
+        fetchData();
+      }
+    },
+    () => {
+      toast.error("Kesalahan. Harap coba lagi");
+    },
+  );
 };
 
 const openModal = () => {

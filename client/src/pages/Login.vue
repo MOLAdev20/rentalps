@@ -17,7 +17,7 @@ const isLoading = ref<boolean>(false);
 const errorMessage = ref<string>("");
 
 onMounted(async () => {
-  document.title = "Login |  Rental";
+  document.title = "Login | Rent.Play!";
   try {
     const token = localStorage.getItem("token");
     if (token) {

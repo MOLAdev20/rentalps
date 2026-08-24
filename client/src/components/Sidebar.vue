@@ -8,6 +8,7 @@ import {
   Wallet,
 } from "@lucide/vue";
 import SidebarLink from "./SidebarLink.vue";
+import icon from "/icon.png";
 
 defineProps<{
   collapsed: boolean;
@@ -31,15 +32,13 @@ defineEmits<{
       class="flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-5"
       :class="collapsed ? 'lg:justify-center lg:px-3' : ''"
     >
-      <div
-        class="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-indigo-600"
-      >
-        <span class="font-display text-sm font-bold text-white">P</span>
+      <div class="grid h-10 w-10 shrink-0 place-items-center">
+        <img :src="icon" class="rounded-lg" />
       </div>
       <span
-        class="brand-text font-display text-[15px] font-bold text-white"
+        class="brand-text font-display text-lg font-bold text-white"
         :class="collapsed ? 'lg:hidden' : ''"
-        >Rental PS</span
+        >Rent.Play!</span
       >
     </div>
 
@@ -127,7 +126,7 @@ defineEmits<{
         :class="collapsed ? 'lg:justify-center lg:px-0' : ''"
       >
         <img
-          src=""
+          src="https://static.vecteezy.com/system/resources/thumbnails/022/014/184/small/user-icon-member-login-isolated-vector.jpg"
           class="h-8 w-8 shrink-0 rounded-full bg-white/10"
           alt="avatar"
         />

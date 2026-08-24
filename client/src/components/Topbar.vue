@@ -75,7 +75,11 @@ defineEmits<{
       <div
         class="ml-1 flex h-9 cursor-pointer items-center gap-2 rounded-lg pl-1 pr-2 transition-colors hover:bg-gray-100"
       >
-        <img src="" class="h-7 w-7 rounded-full" alt="avatar" />
+        <img
+          src="https://static.vecteezy.com/system/resources/thumbnails/022/014/184/small/user-icon-member-login-isolated-vector.jpg"
+          class="h-7 w-7 rounded-full"
+          alt="avatar"
+        />
         <svg
           class="h-3.5 w-3.5 text-gray-400"
           fill="none"
