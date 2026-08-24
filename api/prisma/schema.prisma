@@ -119,7 +119,7 @@ model FnBItemOrder {
 
 model Transaction {
   id              Int                        @id @default(autoincrement())
-  order_id        Int                        @unique
+  order_id        Int                        
   transaction_no  String
   payment_method  TransactionPaymentMethod @default(pending_payment)
   amount          Float

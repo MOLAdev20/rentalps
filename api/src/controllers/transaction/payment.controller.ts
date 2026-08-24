@@ -23,16 +23,15 @@ const generateTransactionNo = async (): Promise<string> => {
   const dateStr = `${day}${month}${year}`;
 
   // urutan terbaru
-  const latestOrder = await prisma.transaction.findFirst({
-    orderBy: {
-      id: "desc",
+  const latestOrder: number = await prisma.transaction.count({
+    where: {
+      created_at: {
+        gte: new Date(now.getDate(), now.getMonth(), now.getFullYear()),
+      },
     },
   });
 
-  let order_no = 0;
-  if (latestOrder) {
-    order_no = latestOrder.id + 1;
-  }
+  const order_no = latestOrder + 1;
 
   return `ORD-${dateStr}-${order_no}`; // Hasil: ORD-23082026-1
 };
@@ -40,24 +39,43 @@ const generateTransactionNo = async (): Promise<string> => {
 const endpoint = {
   proceedPayment: async (req: Request, res: Response) => {
     try {
-      const transactionId = Number(req.body.transaction_id);
+      const orderId = Number(req.body.order_id);
       const paymentMethod = req.body.payment_method;
 
-      await prisma.transaction.update({
+      const orders = await prisma.orders.update({
         where: {
-          id: transactionId,
+          id: orderId,
         },
         data: {
+          status: "complete",
+          rentedUnitOrder: {
+            updateMany: {
+              where: {
+                status: "playing",
+              },
+              data: {
+                status: "finished",
+              },
+            },
+          },
+        },
+      });
+
+      const transaction = await prisma.transaction.create({
+        data: {
+          order_id: orders.id,
+          transaction_no: await generateTransactionNo(),
           payment_method: paymentMethod,
           status: "complete",
+          amount: orders.total,
         },
       });
 
       await prisma.unitItem.updateMany({
         where: {
-          RentedUnitOrder: {
+          rentedUnitOrder: {
             some: {
-              order_id: transactionId,
+              order_id: orders.id,
             },
           },
         },
@@ -68,17 +86,19 @@ const endpoint = {
 
       res.json({
         message: "payment-success",
+        data: transaction,
       });
     } catch (err) {
       res.status(500).json({
         message: "payment-error",
+        err: err,
       });
     }
   },
 
   generateQris: async (req: Request, res: Response) => {
     try {
-      const orderId = Number(req.body.transaction_id);
+      const orderId = Number(req.body.order_id);
 
       // 1. Get Order Detail
       const order = await prisma.orders.findUniqueOrThrow({
