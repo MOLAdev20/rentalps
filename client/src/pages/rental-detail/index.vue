@@ -234,9 +234,7 @@ const handlePayment = async () => {
             order_id: orderId.value,
           },
           (response: any) => {
-            const { snap_url } = response.data.data;
-
-            console.log(response.data.data.snap_url);
+            const { snap_url } = response.data.transaction;
 
             if (!snap_url) {
               throw new Error("Snap URL tidak ditemukan");

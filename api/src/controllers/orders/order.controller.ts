@@ -196,6 +196,9 @@ const endpoint = {
             orderBy: {
               id: "desc",
             },
+            where: {
+              status: "pending",
+            },
           },
         },
       });

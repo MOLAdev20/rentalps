@@ -33,7 +33,7 @@ const generateTransactionNo = async (): Promise<string> => {
 
   const order_no = latestOrder + 1;
 
-  return `ORD-${dateStr}-${order_no}`; // Hasil: ORD-23082026-1
+  return `TRX-${dateStr}-${order_no}`; // Hasil: ORD-23082026-1
 };
 
 const endpoint = {
@@ -105,12 +105,13 @@ const endpoint = {
         where: { id: orderId },
       });
 
+      const transactionNumber = await generateTransactionNo();
       // 2. Request Snap transaction for QRIS only
-      const snapMinutesDuration = 15;
+      const snapMinutesDuration = 1;
       const parameter = {
         transaction_details: {
           gross_amount: order.total,
-          order_id: await generateTransactionNo(),
+          order_id: transactionNumber,
         },
         enabled_payments: ["other_qris"],
         expiry: {
@@ -128,7 +129,7 @@ const endpoint = {
       const transaction = await prisma.transaction.create({
         data: {
           order_id: order.id,
-          transaction_no: await generateTransactionNo(),
+          transaction_no: transactionNumber,
           amount: order.total,
           payment_method: "qris",
           snap_url: snapResponse.redirect_url,
@@ -138,7 +139,7 @@ const endpoint = {
 
       res.json({
         message: "qris-generated",
-        data: transaction,
+        transaction,
       });
     } catch (err) {
       const midtransError = err as {
@@ -158,8 +159,82 @@ const endpoint = {
     try {
       const notification = await snap.transaction.notification(req.body);
 
-      res.json(notification);
       console.log(notification);
+
+      const transactionStatus: string = notification.transaction_status;
+      const transactionNumber: string = notification.order_id;
+
+      if (transactionStatus === "settlement") {
+        // 1. Cari data transaksi + dapet ID dari relasi-relasinya
+        const transactionData = await prisma.transaction.findFirst({
+          where: { transaction_no: transactionNumber },
+          select: {
+            id: true,
+            transaction_no: true,
+            orders: {
+              select: {
+                order_no: true,
+                rentedUnitOrder: {
+                  select: {
+                    id: true,
+                    unit_item_id: true, // ID unit PS fisiknya
+                  },
+                },
+              },
+            },
+          },
+        });
+        // 2. Validasi
+        if (!transactionData) {
+          throw new Error(`Transaction ${notification.order_id} not found`);
+        }
+        // Extract list ID unit yang disewa & ID PS fisiknya
+        const rentedUnitItemIds = transactionData.orders.rentedUnitOrder.map(
+          (item) => item.id,
+        );
+        const unitItemIds = transactionData.orders.rentedUnitOrder.map(
+          (item) => item.unit_item_id,
+        );
+        // 3. Eksekusi update 4 tabel sekaligus pake $transaction
+        await prisma.$transaction([
+          // A. Update status transaksi ini
+          prisma.transaction.update({
+            where: { id: transactionData.id },
+            data: { status: "complete" },
+          }),
+          // B. Update status order induk
+          prisma.orders.update({
+            where: { order_no: transactionData.orders.order_no },
+            data: { status: "complete" },
+          }),
+          // C. Update status item PS yang dipesan
+          prisma.rentedUnitOrder.updateMany({
+            where: { id: { in: rentedUnitItemIds } },
+            data: { status: "finished" },
+          }),
+          // D. Update status fisik unit PS-nya biar bisa disewa lagi
+          prisma.unitItem.updateMany({
+            where: { id: { in: unitItemIds } },
+            data: { status: "available" },
+          }),
+        ]);
+      } else if (
+        transactionStatus === "expire" ||
+        transactionStatus === "cancel"
+      ) {
+        await prisma.transaction.updateMany({
+          where: {
+            transaction_no: transactionNumber,
+          },
+          data: {
+            status: transactionStatus == "expire" ? "expired" : "cancel",
+          },
+        });
+      }
+
+      res.json({
+        message: "notification-processed",
+      });
     } catch (err) {
       console.log(err);
       res.status(500).json({
