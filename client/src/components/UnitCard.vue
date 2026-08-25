@@ -7,6 +7,7 @@ defineProps<{
   name: string;
   pricePerHour: string;
   status: string;
+  rentedSession?: RentedSession;
 }>();
 </script>
 
