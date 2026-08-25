@@ -142,17 +142,20 @@ const endpoint = {
     try {
       let id: number = Number(req.params.unit_id);
 
-      const orderDetail = await prisma.orders.findFirstOrThrow({
+      let orderDetail = await prisma.orders.findFirst({
         where: {
-          status: "pending",
           rentedUnitOrder: {
             some: {
               unit_item_id: id,
+              status: "playing",
               unitItem: {
                 status: "rented",
               },
             },
           },
+        },
+        orderBy: {
+          id: "desc",
         },
         include: {
           rentedUnitOrder: {
@@ -161,6 +164,7 @@ const endpoint = {
               sub_total: true,
               start_time: true,
               end_time: true,
+              status: true,
               unitItem: {
                 select: {
                   title: true,
@@ -202,6 +206,70 @@ const endpoint = {
           },
         },
       });
+
+      if (!orderDetail) {
+        let orderDetail = await prisma.orders.findFirst({
+          where: {
+            status: "pending",
+            rentedUnitOrder: {
+              some: {
+                unit_item_id: id,
+              },
+            },
+          },
+          orderBy: {
+            id: "desc",
+          },
+          include: {
+            rentedUnitOrder: {
+              select: {
+                play_time: true,
+                sub_total: true,
+                start_time: true,
+                end_time: true,
+                status: true,
+                unitItem: {
+                  select: {
+                    title: true,
+                    rent_price: true,
+                    status: true,
+                  },
+                },
+              },
+            },
+            fnbItemOrder: {
+              select: {
+                id: true,
+                quantity: true,
+                sub_total: true,
+                fnbItem: {
+                  select: {
+                    id: true,
+                    title: true,
+                    description: true,
+                    price: true,
+                  },
+                },
+              },
+            },
+            transaction: {
+              select: {
+                payment_method: true,
+                snap_url: true,
+                snap_expiry: true,
+                status: true,
+              },
+              take: 1,
+              orderBy: {
+                id: "desc",
+              },
+              where: {
+                status: "pending",
+              },
+            },
+          },
+        });
+      }
 
       res.json(orderDetail);
     } catch (err) {
