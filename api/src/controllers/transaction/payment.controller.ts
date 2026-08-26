@@ -41,6 +41,7 @@ const endpoint = {
     try {
       const orderId = Number(req.body.order_id);
       const paymentMethod = req.body.payment_method;
+      const turnOffUnit = Number(req.body.turn_off_unit);
 
       const orders = await prisma.orders.update({
         where: {
@@ -48,16 +49,6 @@ const endpoint = {
         },
         data: {
           status: "complete",
-          rentedUnitOrder: {
-            updateMany: {
-              where: {
-                status: "playing",
-              },
-              data: {
-                status: "finished",
-              },
-            },
-          },
         },
       });
 
@@ -71,18 +62,25 @@ const endpoint = {
         },
       });
 
-      await prisma.unitItem.updateMany({
-        where: {
-          rentedUnitOrder: {
-            some: {
-              order_id: orders.id,
+      if (turnOffUnit === 1) {
+        await prisma.rentedUnitOrder.updateMany({
+          where: { order_id: orders.id },
+          data: { status: "finished" },
+        });
+
+        await prisma.unitItem.updateMany({
+          where: {
+            rentedUnitOrder: {
+              some: {
+                order_id: orders.id,
+              },
             },
           },
-        },
-        data: {
-          status: "available",
-        },
-      });
+          data: {
+            status: "available",
+          },
+        });
+      }
 
       res.json({
         message: "payment-success",

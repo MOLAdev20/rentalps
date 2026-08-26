@@ -141,18 +141,27 @@ const endpoint = {
   getByRentedUnit: async (req: Request, res: Response) => {
     try {
       let id: number = Number(req.params.unit_id);
+      let orderId: number = Number(req.query.order);
 
-      const orderDetail = await prisma.orders.findFirstOrThrow({
+      if (!orderId || isNaN(orderId)) {
+        return res.status(400).json({
+          message: "bad-request",
+          detail: "order id is required or must a number",
+        });
+      }
+
+      let orderDetail = await prisma.orders.findFirst({
         where: {
-          status: "pending",
+          id: orderId,
           rentedUnitOrder: {
             some: {
               unit_item_id: id,
-              unitItem: {
-                status: "rented",
-              },
+              unitItem: { id },
             },
           },
+        },
+        orderBy: {
+          id: "desc",
         },
         include: {
           rentedUnitOrder: {
@@ -161,6 +170,7 @@ const endpoint = {
               sub_total: true,
               start_time: true,
               end_time: true,
+              status: true,
               unitItem: {
                 select: {
                   title: true,
@@ -203,11 +213,11 @@ const endpoint = {
         },
       });
 
-      res.json(orderDetail);
-    } catch (err) {
+      return res.json(orderDetail);
+    } catch (err: any) {
       res.status(500).json({
         message: "internal-server-error",
-        detail: err,
+        detail: err.message,
       });
     }
   },

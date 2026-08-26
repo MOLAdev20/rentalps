@@ -12,6 +12,7 @@ const endpoint = {
               status: "playing",
             },
             select: {
+              order_id: true,
               start_time: true,
               end_time: true,
             },

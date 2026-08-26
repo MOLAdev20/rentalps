@@ -10,6 +10,7 @@ import pslogo from "/ps-logo.webp";
 import dayjs from "dayjs";
 
 interface RentedSession {
+  order_id: number;
   start_time: string;
   end_time: string;
 }
@@ -186,7 +187,11 @@ onUnmounted(() => {
           <RouterLink
             v-else-if="status === 'rented' && isTicking"
             class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl p-3 font-medium text-white bg-emerald-600 hover:bg-emerald-800 transition-all active:scale-[0.98] cursor-pointer"
-            :to="{ name: 'rent-detail', params: { id } }"
+            :to="{
+              name: 'rent-detail',
+              params: { id },
+              query: { order: rentedSession?.order_id },
+            }"
           >
             <span>Sedang Disewa</span>
             <ArrowRightCircle />
@@ -195,7 +200,11 @@ onUnmounted(() => {
           <RouterLink
             v-else-if="status === 'rented' && !isTicking"
             class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl p-3 font-medium text-white bg-amber-600 hover:bg-amber-800 transition-all active:scale-[0.98] cursor-pointer"
-            :to="{ name: 'rent-detail', params: { id } }"
+            :to="{
+              name: 'rent-detail',
+              params: { id },
+              query: { order: rentedSession?.order_id },
+            }"
           >
             <span>Selesai Disewa</span>
             <ArrowRightCircle />

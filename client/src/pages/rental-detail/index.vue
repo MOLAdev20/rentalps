@@ -6,11 +6,12 @@ import utc from "dayjs/plugin/utc";
 import "dayjs/locale/id.js";
 import FnbItemSidebar from "./components/FnbItemSidebar.vue";
 import SessionCard from "./components/SessionCard.vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import AlertDialog from "../../components/AlertDialog.vue";
 import { useAlertDialog } from "../../composables/useAlertDialog.ts";
 import {
   ArrowLeftCircle,
+  CheckCircle,
   Minus,
   Plus,
   PlusCircle,
@@ -45,6 +46,8 @@ const paymentSelectionMode = ref<boolean>(true);
 const showQrisModal = ref(false);
 const qrisUrl = ref<string>("");
 const isLoadingQris = ref(false);
+const turnOfUnit = ref<boolean>(false);
+const paymentStatus = ref<string>("pending");
 
 // ================= Data Sesi =================
 const orderId = ref<number>(0);
@@ -159,19 +162,20 @@ const fnbTotal = computed(() =>
 const grandTotal = computed(() => unitRentTotal.value + fnbTotal.value);
 
 // ================= Lifecycle =================
+const route = useRoute();
 onMounted(() => {
-  document.title = "Detail sewa | Rent.Play!";
-
   axios.get(
-    `order/by-unit/${props.id}`,
+    `order/by-unit/${props.id}${route.query.order ? "?order=" + route.query.order : ""}`,
     (response: any) => {
-      const { id, customer_name, rentedUnitOrder, transaction } = response.data;
+      const { id, status, customer_name, rentedUnitOrder, transaction } =
+        response.data;
 
       orderId.value = id;
       customerName.value = customer_name;
       rentedUnit.value = rentedUnitOrder[0].unitItem.title;
       rawStartTime.value = rentedUnitOrder[0].start_time;
       rawEndTime.value = rentedUnitOrder[0].end_time;
+      paymentStatus.value = status;
 
       console.log(response.data);
 
@@ -257,6 +261,7 @@ const handlePayment = async () => {
           {
             order_id: orderId.value,
             payment_method: paymentMethod.value,
+            turn_off_unit: turnOfUnit.value ? 1 : 0,
           },
           () => {
             alert({
@@ -264,7 +269,6 @@ const handlePayment = async () => {
               message: "Terimakasih telah bermain!",
               variant: "success",
             });
-
             // router.push({ name: "rent" });
           },
           () => {
@@ -449,109 +453,113 @@ const switchPaymentMode = async () => {
               </div>
 
               <!-- Pilihan Metode Pembayaran (Di atas tombol Selesaikan & Bayar) -->
-              <div v-if="paymentSelectionMode">
-                <div class="mt-5 pt-4 border-t border-gray-100">
-                  <p class="text-xs font-medium text-gray-500 mb-2.5">
-                    Metode Pembayaran
-                  </p>
-                  <div class="grid grid-cols-2 gap-2.5">
-                    <!-- Tunai -->
-                    <label
-                      class="flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all"
-                      :class="
-                        paymentMethod === 'cash'
-                          ? 'border-indigo-600 bg-indigo-50/30 ring-1 ring-indigo-600'
-                          : 'border-gray-200 bg-white hover:border-gray-300'
-                      "
-                    >
-                      <div class="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          v-model="paymentMethod"
-                          value="cash"
-                          class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
-                        />
-                        <span class="text-sm font-medium text-gray-800"
-                          >Tunai/Cash</span
-                        >
-                      </div>
-                      <svg
-                        class="w-5 h-5 text-gray-500"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="1.8"
+              <div v-if="paymentStatus === 'pending'">
+                <div v-if="paymentSelectionMode">
+                  <div class="mt-5 pt-4 border-t border-gray-100">
+                    <p class="text-xs font-medium text-gray-500 mb-2.5">
+                      Metode Pembayaran
+                    </p>
+                    <div class="grid grid-cols-2 gap-2.5">
+                      <!-- Tunai -->
+                      <label
+                        class="flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all"
+                        :class="
+                          paymentMethod === 'cash'
+                            ? 'border-indigo-600 bg-indigo-50/30 ring-1 ring-indigo-600'
+                            : 'border-gray-200 bg-white hover:border-gray-300'
+                        "
                       >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
-                        />
-                      </svg>
-                    </label>
+                        <div class="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            v-model="paymentMethod"
+                            value="cash"
+                            class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                          />
+                          <span class="text-sm font-medium text-gray-800"
+                            >Tunai/Cash</span
+                          >
+                        </div>
+                      </label>
 
-                    <!-- QRIS -->
-                    <label
-                      class="flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all"
-                      :class="
-                        paymentMethod === 'qris'
-                          ? 'border-indigo-600 bg-indigo-50/30 ring-1 ring-indigo-600'
-                          : 'border-gray-200 bg-white hover:border-gray-300'
-                      "
-                    >
-                      <div class="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          v-model="paymentMethod"
-                          value="qris"
-                          class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
-                        />
-                        <span class="text-sm font-medium text-gray-800"
-                          >QRIS</span
-                        >
-                      </div>
-                      <!-- Logo QRIS -->
-                      <span
-                        class="text-[10px] font-black tracking-widest text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded leading-none"
+                      <!-- QRIS -->
+                      <label
+                        class="flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all"
+                        :class="
+                          paymentMethod === 'qris'
+                            ? 'border-indigo-600 bg-indigo-50/30 ring-1 ring-indigo-600'
+                            : 'border-gray-200 bg-white hover:border-gray-300'
+                        "
                       >
-                        QRIS
-                      </span>
-                    </label>
+                        <div class="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            v-model="paymentMethod"
+                            value="qris"
+                            class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                          />
+                          <span class="text-sm font-medium text-gray-800"
+                            >QRIS</span
+                          >
+                        </div>
+                      </label>
+                    </div>
                   </div>
-                </div>
 
-                <!-- Tombol Selesaikan & Bayar -->
-                <button
-                  @click="handlePayment"
-                  :disabled="isLoadingQris"
-                  class="mt-4 w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-indigo-600 text-white text-sm font-semibold shadow-md shadow-indigo-200 active:scale-[0.98] transition-all cursor-pointer"
-                  :class="isLoadingQris ? 'opacity-70 cursor-not-allowed' : ''"
-                >
-                  <Wallet class="text-white" :size="16" />
-                  {{
-                    isLoadingQris
-                      ? "Sedang Membuat QRIS..."
-                      : "Selesaikan & Bayar"
-                  }}
-                </button>
+                  <div class="mt-5 pt-1 border-t border-gray-100 flex gap-2">
+                    <input v-model="turnOfUnit" type="checkbox" id="turn-of" />
+                    <label for="turn-of">Matikan unitnya juga</label>
+                  </div>
+
+                  <!-- Tombol Selesaikan & Bayar -->
+                  <button
+                    @click="handlePayment"
+                    :disabled="isLoadingQris"
+                    class="mt-4 w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-indigo-600 text-white text-sm font-semibold shadow-md shadow-indigo-200 active:scale-[0.98] transition-all cursor-pointer"
+                    :class="
+                      isLoadingQris ? 'opacity-70 cursor-not-allowed' : ''
+                    "
+                  >
+                    <Wallet class="text-white" :size="16" />
+                    {{
+                      isLoadingQris
+                        ? "Sedang Membuat QRIS..."
+                        : "Selesaikan & Bayar"
+                    }}
+                  </button>
+                </div>
+                <div v-else>
+                  <!-- Tombol Selesaikan & Bayar -->
+                  <button
+                    @click="showQrisModal = true"
+                    :disabled="isLoadingQris"
+                    class="mt-4 w-full flex items-center justify-center gap-1 h-11 rounded-xl bg-yellow-600 text-white text-sm font-semibold shadow-md shadow-indigo-200 active:scale-[0.98] transition-all cursor-pointer"
+                    :class="
+                      isLoadingQris ? 'opacity-70 cursor-not-allowed' : ''
+                    "
+                  >
+                    Lanjutkan Pembayaran
+                    <SquareChevronRight class="text-white" :size="18" />
+                  </button>
+                  <button
+                    @click="switchPaymentMode"
+                    class="mt-3 text-sm text-indigo-500 hover:text-indigo-700 flex items-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCcw :size="18" /><span
+                      >Ganti Metode Pembayaran</span
+                    >
+                  </button>
+                </div>
               </div>
               <div v-else>
-                <!-- Tombol Selesaikan & Bayar -->
-                <button
-                  @click="showQrisModal = true"
-                  :disabled="isLoadingQris"
-                  class="mt-4 w-full flex items-center justify-center gap-1 h-11 rounded-xl bg-yellow-600 text-white text-sm font-semibold shadow-md shadow-indigo-200 active:scale-[0.98] transition-all cursor-pointer"
-                  :class="isLoadingQris ? 'opacity-70 cursor-not-allowed' : ''"
-                >
-                  Lanjutkan Pembayaran
-                  <SquareChevronRight class="text-white" :size="18" />
-                </button>
-                <button
-                  @click="switchPaymentMode"
-                  class="mt-3 text-sm text-indigo-500 hover:text-indigo-700 flex items-center gap-1 cursor-pointer"
-                >
-                  <RefreshCcw :size="18" /><span>Ganti Metode Pembayaran</span>
-                </button>
+                <div class="mt-5 pt-4 border-t border-gray-100">
+                  <div
+                    class="flex items-center gap-1 rounded-xl text-emerald-500 font-semibold text-xs"
+                  >
+                    <CheckCircle :size="15" />
+                    <span>Seluruh tagihan sudah dibayar</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
