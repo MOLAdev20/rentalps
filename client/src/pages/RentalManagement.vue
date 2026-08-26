@@ -24,7 +24,11 @@ interface Unit {
   title: string;
   rent_price: string;
   status: string;
-  rentedSession: [];
+  rentedSession: {
+    order_id: number;
+    start_time: string;
+    end_time: string;
+  };
 }
 
 const unitData = ref<Unit[]>([]);

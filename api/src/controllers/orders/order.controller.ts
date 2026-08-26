@@ -141,16 +141,22 @@ const endpoint = {
   getByRentedUnit: async (req: Request, res: Response) => {
     try {
       let id: number = Number(req.params.unit_id);
+      let orderId: number = Number(req.query.order);
+
+      if (!orderId || isNaN(orderId)) {
+        return res.status(400).json({
+          message: "bad-request",
+          detail: "order id is required or must a number",
+        });
+      }
 
       let orderDetail = await prisma.orders.findFirst({
         where: {
+          id: orderId,
           rentedUnitOrder: {
             some: {
               unit_item_id: id,
-              status: "playing",
-              unitItem: {
-                status: "rented",
-              },
+              unitItem: { id },
             },
           },
         },
@@ -207,75 +213,11 @@ const endpoint = {
         },
       });
 
-      if (!orderDetail) {
-        let orderDetail = await prisma.orders.findFirst({
-          where: {
-            status: "pending",
-            rentedUnitOrder: {
-              some: {
-                unit_item_id: id,
-              },
-            },
-          },
-          orderBy: {
-            id: "desc",
-          },
-          include: {
-            rentedUnitOrder: {
-              select: {
-                play_time: true,
-                sub_total: true,
-                start_time: true,
-                end_time: true,
-                status: true,
-                unitItem: {
-                  select: {
-                    title: true,
-                    rent_price: true,
-                    status: true,
-                  },
-                },
-              },
-            },
-            fnbItemOrder: {
-              select: {
-                id: true,
-                quantity: true,
-                sub_total: true,
-                fnbItem: {
-                  select: {
-                    id: true,
-                    title: true,
-                    description: true,
-                    price: true,
-                  },
-                },
-              },
-            },
-            transaction: {
-              select: {
-                payment_method: true,
-                snap_url: true,
-                snap_expiry: true,
-                status: true,
-              },
-              take: 1,
-              orderBy: {
-                id: "desc",
-              },
-              where: {
-                status: "pending",
-              },
-            },
-          },
-        });
-      }
-
-      res.json(orderDetail);
-    } catch (err) {
+      return res.json(orderDetail);
+    } catch (err: any) {
       res.status(500).json({
         message: "internal-server-error",
-        detail: err,
+        detail: err.message,
       });
     }
   },

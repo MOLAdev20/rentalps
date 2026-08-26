@@ -6,7 +6,7 @@ import utc from "dayjs/plugin/utc";
 import "dayjs/locale/id.js";
 import FnbItemSidebar from "./components/FnbItemSidebar.vue";
 import SessionCard from "./components/SessionCard.vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import AlertDialog from "../../components/AlertDialog.vue";
 import { useAlertDialog } from "../../composables/useAlertDialog.ts";
 import {
@@ -162,11 +162,10 @@ const fnbTotal = computed(() =>
 const grandTotal = computed(() => unitRentTotal.value + fnbTotal.value);
 
 // ================= Lifecycle =================
+const route = useRoute();
 onMounted(() => {
-  document.title = "Detail sewa | Rent.Play!";
-
   axios.get(
-    `order/by-unit/${props.id}`,
+    `order/by-unit/${props.id}${route.query.order ? "?order=" + route.query.order : ""}`,
     (response: any) => {
       const { id, status, customer_name, rentedUnitOrder, transaction } =
         response.data;
