@@ -1,13 +1,19 @@
-import jwt from "jsonwebtoken";
+import jwt, { type SignOptions } from "jsonwebtoken";
+import env from "../config/env.js";
+
+interface jwtPayload {
+  id: number;
+  username: string;
+}
 
 export default {
-  signToken: async (payload: any, exp: string) => {
-    return await jwt.sign(payload, process.env.JWT_SECRET_KEY, {
+  signToken: async (payload: jwtPayload, exp: SignOptions["expiresIn"]) => {
+    return jwt.sign(payload, env.JWT_SECRET_KEY, {
       expiresIn: exp,
     });
   },
 
   verify: async (token: string) => {
-    return await jwt.verify(token, process.env.JWT_SECRET_KEY);
+    return jwt.verify(token, env.JWT_SECRET_KEY);
   },
 };
