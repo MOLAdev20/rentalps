@@ -59,13 +59,12 @@ async function handleLogin() {
 
     router.replace("/dashboard");
   } catch (err: any) {
-    console.log(err);
     const message = err.response.data.message;
 
     if (message == "invalid-credentials") {
       errorMessage.value = "Username atau password salah";
     } else {
-      errorMessage.value = "Error";
+      errorMessage.value = "Ada masalah. Coba lagi";
     }
   } finally {
     isLoading.value = false;

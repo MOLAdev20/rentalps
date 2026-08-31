@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { useAxios } from "../../../composables/useAxios";
+import axios from "../helper/axios";
 import { CircleX, PlusCircleIcon, Search, Utensils } from "@lucide/vue";
-import { formatRupiah } from "../../../helper";
+import { formatRupiah } from "../helper";
 
 type Item = {
   id: number;
@@ -20,8 +20,6 @@ const sidebarStatus = defineModel("sidebar-status", {
 const emit = defineEmits<{
   pickFnbItem: [Item: Item];
 }>();
-
-const axios = useAxios();
 
 onMounted(async () => {
   axios.get("fnb", (response: any) => {
