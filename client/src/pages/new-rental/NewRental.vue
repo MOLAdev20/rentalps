@@ -1,197 +1,52 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, type ComputedRef } from "vue";
+import { onMounted, onUnmounted } from "vue";
 import BaseLayout from "../../components/__Layout.vue";
-import FnbItemSidebar from "../rental-detail/components/FnbItemSidebar.vue";
-import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
+import FnbItemSidebar from "../../components/FnbItemSidebar.vue";
 import { PlayCircle, PlusCircleIcon, Trash } from "@lucide/vue";
-import { useRouter } from "vue-router";
 import AlertDialog from "../../components/AlertDialog.vue";
-import { useAlertDialog } from "../../composables/useAlertDialog.ts";
 import { formatRupiah } from "../../helper/currency.ts";
 import SessionCard from "./components/SessionCard.vue";
-import { useAxios } from "../../composables/useAxios.ts";
+import { useFnb } from "./composables/useFnb.ts";
+import { usePlaySession } from "./composables/usePlaySession.ts";
 
 const props = defineProps<{
   unitId: String;
 }>();
 
-interface FnBItem {
-  id: number;
-  name: string;
-  price: number;
-  qty: number;
-}
+const {
+  fnbTotal,
+  selectedFnBItems,
+  sidebarStatus,
+  decrementQty,
+  incrementQty,
+  pickFnbItem,
+  removeFnbItem,
+} = useFnb();
 
-const router = useRouter();
-const axios = useAxios();
-const sidebarStatus = ref(false);
-const unitTitle = ref<string>();
-const unitRentPrice = ref<number>(0);
-const selectedFnBItems = ref<FnBItem[]>([]);
-const customerName = ref<string>();
-const todaysFormattedDate = ref<string>(
-  dayjs().locale("id").format("DD MMMM YYYY"),
-);
-const currentTime = ref<string>(dayjs().format("HH:mm:ss"));
-const playDuration = ref<number>(1);
+const {
+  increasePlayDuration,
+  decreasePlayDuration,
+  currentTime,
+  estimatedEndTime,
+  playDuration,
+  todaysFormattedDate,
+  unitTitle,
+  unitRentPrice,
+  loadSession,
+  resetInterval,
+  grandTotal,
+  startPlay,
+  customerName,
+  totalRentPrice,
+} = usePlaySession(Number(props.unitId) as number);
 
-const { alert, confirm } = useAlertDialog();
-
-let tick = 0;
 onMounted(async () => {
-  axios.get(
-    `unit/available/${props.unitId}`,
-    (response: any) => {
-      unitTitle.value = response.data.title;
-      unitRentPrice.value = response.data.rent_price;
-
-      tick = setInterval(() => {
-        currentTime.value = dayjs().format("HH:mm:ss");
-        todaysFormattedDate.value = dayjs().locale("id").format("DD MMMM YYYY");
-      }, 1000);
-    },
-    () => {
-      router.replace({ name: "NotFound" });
-    },
-  );
+  loadSession();
 });
 
 onUnmounted(() => {
-  clearInterval(tick);
+  resetInterval();
 });
-
-const totalRentPrice: ComputedRef<number> = computed(() => {
-  return playDuration.value * unitRentPrice.value;
-});
-
-const estimatedEndTime = computed(() => {
-  if (!playDuration.value) return "-";
-
-  // Ambil jam hari ini dengan waktu dari startTime
-  const baseTime = dayjs(`2026-08-09 ${currentTime.value}`);
-
-  // Tambahkan durasi berdasarkan state playDuration
-  return baseTime.add(playDuration.value, "hour").format("HH:mm:ss");
-});
-
-const decreasePlayDuration = () => {
-  if (playDuration.value > 0) {
-    playDuration.value--;
-  }
-};
-
-const increasePlayDuration = () => {
-  playDuration.value++;
-};
-
-function incrementQty(item: FnBItem) {
-  item.qty += 1;
-}
-
-function decrementQty(item: FnBItem) {
-  if (item.qty <= 1) {
-    removeFnbItem(item);
-    return;
-  }
-  item.qty -= 1;
-}
-
-function removeFnbItem(item: FnBItem) {
-  confirm({
-    title: "Hapus item ini?",
-    message: `Buang ${item.name}?`,
-    cancelText: "Batal",
-    confirmText: "Ya, Hapus",
-    variant: "warning",
-  }).then((result) => {
-    if (result)
-      selectedFnBItems.value = selectedFnBItems.value.filter((i) => i !== item);
-  });
-}
-
-const pickFnbItem = (catalogItem: {
-  id: number;
-  name: string;
-  price: number;
-}) => {
-  const existing = selectedFnBItems.value.find((i) => i.id === catalogItem.id);
-  if (existing) {
-    existing.qty += 1;
-  } else {
-    selectedFnBItems.value.push({ ...catalogItem, qty: 1 });
-  }
-
-  setTimeout(() => (sidebarStatus.value = false), 250);
-};
-
-const fnbTotal: ComputedRef<number> = computed(() =>
-  selectedFnBItems.value.reduce((sum, item) => sum + item.price * item.qty, 0),
-);
-
-const grandTotal = computed(() => totalRentPrice.value + fnbTotal.value);
-
-const proceedPayment = async () => {
-  if (!customerName.value) {
-    alert({
-      title: "Nama penyewa belum diisi",
-      message: "Silahkan isi nama penyewa",
-      variant: "warning",
-    });
-    return;
-  }
-
-  const askProceed: Boolean = await confirm({
-    title: "Mulai Main?",
-    message: "Unit dimainkan sampai waktu yang ditentukan",
-    variant: "warning",
-    confirmText: "Oke, Lanjut",
-    cancelText: "Batal",
-  });
-
-  if (askProceed) {
-    dayjs.extend(utc);
-
-    let transactionFnb = selectedFnBItems.value.map((item) => ({
-      fnb_item: item.id,
-      quantity: item.qty,
-    }));
-
-    const endTime = dayjs().add(playDuration.value, "hour").utc().format();
-
-    const payload = {
-      customer_name: customerName.value,
-      transaction_rental: [
-        {
-          unit_item: Number(props.unitId),
-          play_time: playDuration.value,
-          start_time: dayjs().utc().format(),
-          end_time: endTime,
-        },
-      ],
-      transaction_fnb: transactionFnb,
-    };
-
-    axios.post(
-      "order",
-      payload,
-      (response: any) => {
-        if (response.status === 200)
-          router.replace({
-            name: "rent-detail",
-            params: { id: String(props.unitId) },
-          });
-      },
-      () => {
-        return alert({
-          title: "Terjadi Kesalahan",
-          message: "Harap coba lagi",
-          variant: "danger",
-        });
-      },
-    );
-  }
-};
 </script>
 <template>
   <BaseLayout>
@@ -354,7 +209,7 @@ const proceedPayment = async () => {
             </div>
 
             <button
-              @click="proceedPayment"
+              @click="startPlay"
               class="mt-4 w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-linear-to-r from-indigo-600 to-violet-600 text-white text-sm font-semibold shadow-md shadow-indigo-200 hover:shadow-lg hover:shadow-indigo-300 active:scale-[0.98] transition-all cursor-pointer"
             >
               <PlayCircle />

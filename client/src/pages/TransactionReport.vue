@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, computed } from "vue";
 import toast, { Toaster } from "vue3-hot-toast";
-import { useAxios } from "../composables/useAxios.ts";
+import axios from "../helper/axios.ts";
 import BaseLayout from "../components/__Layout.vue";
 import {
   EllipsisVertical,
@@ -20,7 +20,6 @@ import dayjs from "dayjs";
 import { useAlertDialog } from "../composables/useAlertDialog";
 
 const { confirm } = useAlertDialog();
-const axios = useAxios();
 
 interface FnbOrderItem {
   id: number;

@@ -4,7 +4,7 @@ import BaseLayout from "../../components/__Layout.vue";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import "dayjs/locale/id.js";
-import FnbItemSidebar from "./components/FnbItemSidebar.vue";
+import FnbItemSidebar from "../../components/FnbItemSidebar.vue";
 import SessionCard from "./components/SessionCard.vue";
 import { useRoute, useRouter } from "vue-router";
 import AlertDialog from "../../components/AlertDialog.vue";
@@ -21,7 +21,7 @@ import {
   Wallet,
 } from "@lucide/vue";
 import { formatRupiah } from "../../helper/index.ts";
-import { useAxios } from "../../composables/useAxios.ts";
+import axios from "../../helper/axios.ts";
 
 dayjs.extend(utc);
 
@@ -29,7 +29,6 @@ const props = defineProps({
   id: String,
 });
 const router = useRouter();
-const axios = useAxios();
 const { alert, confirm } = useAlertDialog();
 
 const paymentMethod = ref<string>("");

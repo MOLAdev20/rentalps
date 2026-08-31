@@ -23,9 +23,7 @@ import {
   Check,
 } from "@lucide/vue";
 import dayjs from "dayjs";
-import { useAxios } from "../composables/useAxios.ts";
-
-const axios = useAxios();
+import axios from "../helper/axios.ts";
 
 // ================= Formatter =================
 const currencyFormat = (value: number) =>

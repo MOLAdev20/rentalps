@@ -1,11 +1,12 @@
 import { type Request, type Response } from "express";
 import { prisma } from "../../lib/prisma.js";
 import midtransClient from "midtrans-client";
+import env from "../../config/env.js";
 
 const snap = new midtransClient.Snap({
   isProduction: false,
-  serverKey: process.env.MIDTRANS_SERVER_KEY,
-  clientKey: process.env.MIDTRANS_CLIENT_KEY,
+  serverKey: env.MIDTRANS.SERVER_KEY,
+  clientKey: env.MIDTRANS.CLIENT_KEY,
 });
 
 interface MidtransSnapResponse {

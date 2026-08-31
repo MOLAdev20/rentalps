@@ -3,7 +3,7 @@ import BaseLayout from "../components/__Layout.vue";
 import UnitCard from "../components/UnitCard.vue";
 
 import { onMounted, ref } from "vue";
-import { useAxios } from "../composables/useAxios.ts";
+import axios from "../helper/axios.ts";
 import {
   CheckCircle,
   PauseCircle,
@@ -32,7 +32,6 @@ interface Unit {
 }
 
 const unitData = ref<Unit[]>([]);
-const axios = useAxios();
 
 onMounted(() => {
   document.title = "Sewa | Rent.Play!";
@@ -48,9 +47,6 @@ onMounted(() => {
           rentedSession: el.rentedUnitOrder,
         });
       });
-
-      console.log(unitData.value);
-      console.log(response.data.unit);
     },
     (err: any) => {
       console.log(err);

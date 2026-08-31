@@ -3,7 +3,7 @@ import { onMounted, ref } from "vue";
 import toast, { Toaster } from "vue3-hot-toast";
 
 import BaseLayout from "../components/__Layout.vue";
-import { useAxios } from "../composables/useAxios.ts";
+import axios from "../helper/axios.ts";
 
 interface Unit {
   id: number;
@@ -26,7 +26,6 @@ onMounted(() => {
   document.title = "Sewa | Rent.Play!";
   fetchData();
 });
-const axios = useAxios();
 
 const fetchData = async () => {
   axios.get(
