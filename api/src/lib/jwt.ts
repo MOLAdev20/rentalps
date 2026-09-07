@@ -7,13 +7,13 @@ interface jwtPayload {
 }
 
 export default {
-  signToken: async (payload: jwtPayload, exp: SignOptions["expiresIn"]) => {
+  signToken: (payload: jwtPayload, exp: SignOptions["expiresIn"]) => {
     return jwt.sign(payload, env.JWT_SECRET_KEY, {
       expiresIn: exp,
     });
   },
 
-  verify: async (token: string) => {
+  verify: (token: string) => {
     return jwt.verify(token, env.JWT_SECRET_KEY);
   },
 };

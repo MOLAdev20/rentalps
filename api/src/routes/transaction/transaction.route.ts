@@ -5,5 +5,6 @@ const route = Router();
 
 route.get("/", transactionController.getAll);
 route.get("/unit/:id", transactionController.getDetail); // get transaction by unit
+route.get("/unit-history/:id", transactionController.getHistoryByUnit); // get transaction history by unit
 
 export default route;

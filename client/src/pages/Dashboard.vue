@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import BaseLayout from "../components/__Layout.vue";
+import Modal from "../components/Modal.vue";
 
 import { onBeforeUnmount, ref } from "vue";
 
@@ -408,38 +409,8 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div v-if="isModalOpen" class="fixed inset-0 z-50">
-      <div class="absolute inset-0 bg-black/50" @click="closeModal" />
-      <div class="relative flex min-h-screen items-center justify-center p-4">
-        <div class="relative w-full max-w-md rounded-2xl bg-white shadow-2xl">
-          <div
-            class="flex items-center justify-between border-b border-gray-100 px-5 py-4"
-          >
-            <h3 class="font-display text-[15px] font-semibold">
-              Tambah Data Baru
-            </h3>
-            <button
-              class="grid h-8 w-8 place-items-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900"
-              type="button"
-              @click="closeModal"
-            >
-              <svg
-                class="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-
-          <div class="space-y-4 px-5 py-5">
+    <Modal v-model="isModalOpen" title="Tambah Data Baru">
+      <div class="space-y-4">
             <div>
               <label class="mb-1.5 block text-sm font-medium">Nama Item</label>
               <input
@@ -476,11 +447,8 @@ onBeforeUnmount(() => {
                 <option>Elektronik</option>
               </select>
             </div>
-          </div>
-
-          <div
-            class="flex items-center justify-end gap-2.5 border-t border-gray-100 px-5 py-4"
-          >
+      </div>
+      <template #footer>
             <button
               class="h-9 rounded-lg border border-gray-200 px-4 text-sm font-medium transition-colors hover:bg-gray-50"
               type="button"
@@ -495,10 +463,8 @@ onBeforeUnmount(() => {
             >
               Simpan
             </button>
-          </div>
-        </div>
-      </div>
-    </div>
+      </template>
+    </Modal>
 
     <div
       class="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-lg bg-gray-900 py-3 pl-4 pr-5 text-sm font-medium text-white shadow-lg transition-all duration-300"

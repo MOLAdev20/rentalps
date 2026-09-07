@@ -12,6 +12,7 @@ import { useAlertDialog } from "../../composables/useAlertDialog.ts";
 import {
   ArrowLeftCircle,
   CheckCircle,
+  History,
   Minus,
   Plus,
   PlusCircle,
@@ -22,6 +23,7 @@ import {
 } from "@lucide/vue";
 import { formatRupiah } from "../../helper/index.ts";
 import axios from "../../helper/axios.ts";
+import RentedHistorySidebar from "../../components/RentedHistorySidebar.vue";
 
 dayjs.extend(utc);
 
@@ -74,6 +76,11 @@ interface OrderedFnbItem {
 
 const fnbItems = ref<OrderedFnbItem[]>([]);
 const sidebarStatus = ref<boolean>(false);
+const rentedHistorySidebarStatus = ref<boolean>(false);
+
+const openRentHistorySidebar = () => {
+  rentedHistorySidebarStatus.value = true;
+};
 
 // ================= Sidebar & Toast =================
 const toastMessage = ref("");
@@ -299,20 +306,31 @@ const switchPaymentMode = async () => {
     <div class="mx-auto max-w-7xl">
       <!-- Header -->
       <div class="mb-6">
-        <div>
-          <div class="flex gap-2 items-center">
-            <RouterLink :to="{ name: 'rent' }">
-              <ArrowLeftCircle class="text-indigo-600" :size="30" />
-            </RouterLink>
-            <h1
-              class="font-display text-2xl font-bold tracking-tight text-gray-900"
-            >
-              Detail Sewa Unit — {{ rentedUnit || "..." }}
-            </h1>
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="flex gap-2 items-center">
+              <RouterLink :to="{ name: 'rent' }">
+                <ArrowLeftCircle class="text-indigo-600" :size="30" />
+              </RouterLink>
+              <h1
+                class="font-display text-2xl font-bold tracking-tight text-gray-900"
+              >
+                Detail Sewa Unit — {{ rentedUnit || "..." }}
+              </h1>
+            </div>
+            <p class="mt-1 text-sm text-gray-500">
+              Kelola waktu main, item FnB, dan pembayaran sesi ini
+            </p>
           </div>
-          <p class="mt-1 text-sm text-gray-500">
-            Kelola waktu main, item FnB, dan pembayaran sesi ini
-          </p>
+          <div>
+            <button
+              @click="openRentHistorySidebar"
+              class="flex gap-1 items-center cursor-pointer text-sm font-medium text-gray-500 hover:text-gray-700"
+            >
+              <History />
+              <span>Riwayat Sewa</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -605,6 +623,14 @@ const switchPaymentMode = async () => {
     <FnbItemSidebar
       v-if="rentedUnit"
       v-model:sidebar-status="sidebarStatus"
+      @pick-fnb-item="pickFnbItem"
+    />
+
+    <!-- Sidebar Riwayat Sewa -->
+    <RentedHistorySidebar
+      v-if="rentedUnit"
+      v-model:sidebar-status="rentedHistorySidebarStatus"
+      :unitId="Number(props.id)"
       @pick-fnb-item="pickFnbItem"
     />
 

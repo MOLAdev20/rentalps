@@ -95,18 +95,18 @@ const endpoint = {
     try {
       const { full_name, email, username, password } = req.body;
 
-      // const userExists = await prisma.user.findFirst({
-      //   where: {
-      //     email,
-      //     OR: [{ username }],
-      //   },
-      // });
+      const userExists = await prisma.user.findFirst({
+        where: {
+          email,
+          OR: [{ username }],
+        },
+      });
 
-      // if (userExists) {
-      //   res.status(400).json({
-      //     message: "email-already-registered",
-      //   });
-      // }
+      if (userExists) {
+        res.status(400).json({
+          message: "email-already-registered",
+        });
+      }
 
       const hashPassword = await bcrypt.hash(password, 10);
       const user = await prisma.user.create({
@@ -141,9 +141,11 @@ const endpoint = {
       //   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhbWluIiwiaWF0IjoxNzg3MjI4OTA3LCJleHAiOjE3ODczMTUzMDd9.3GKaLF2KltMOr6FaP7Z8zPnsWHvWhPqXVaPVSFZjYdY",
       // );
 
-      const isTokenValid = await jwt.verify(refreshToken.token);
+      const isTokenValid = jwt.verify(refreshToken.token);
 
-      const newToken = await jwt.signToken(
+      console.log(isTokenValid);
+
+      const newToken = jwt.signToken(
         {
           id: isTokenValid.id,
           username: isTokenValid.username,

@@ -41,6 +41,7 @@ const {
 } = usePlaySession(Number(props.unitId) as number);
 
 onMounted(async () => {
+  document.title = `Sewa Baru | Rent.Play!`;
   loadSession();
 });
 

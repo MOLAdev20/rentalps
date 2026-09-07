@@ -115,6 +115,7 @@ export const usePlaySession = (unitId: number) => {
             router.replace({
               name: "rent-detail",
               params: { id: String(unitId) },
+              query: { order: String(response.data.data.order_id) },
             });
         },
         () => {

@@ -109,29 +109,6 @@ async function handleLogin() {
           Rental POS</span
         >
       </div>
-
-      <!-- testimoni -->
-      <div class="absolute z-10 bottom-8 left-8 right-8">
-        <div
-          class="rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 p-5"
-        >
-          <p class="text-white text-sm leading-relaxed">
-            "Semua kebutuhan buat ngatur sewa PS, dari billing sampe laporan
-            keuangan, kekumpul rapi di satu tempat."
-          </p>
-          <div class="mt-4 flex items-center gap-2.5">
-            <div
-              class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-xs font-bold"
-            >
-              A
-            </div>
-            <div>
-              <p class="text-white text-xs font-semibold">Ahmad Maulana</p>
-              <p class="text-indigo-100 text-[11px]">Owner Rental PS</p>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- ============ Kolom 1: Form Login ============ -->

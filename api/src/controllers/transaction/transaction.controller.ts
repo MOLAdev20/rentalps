@@ -156,6 +156,52 @@ const endpoint = {
       });
     }
   },
+
+  getHistoryByUnit: async (req: Request, res: Response) => {
+    try {
+      let unitId: number = Number(req.params.id);
+
+      const orderHistory = await prisma.orders.findMany({
+        where: {
+          rentedUnitOrder: {
+            some: {
+              unit_item_id: unitId,
+            },
+          },
+        },
+        select: {
+          id: true,
+          customer_name: true,
+          total: true,
+          created_at: true,
+          status: true,
+          rentedUnitOrder: {
+            select: {
+              id: true,
+              play_time: true,
+              start_time: true,
+              end_time: true,
+              unitItem: {
+                select: {
+                  id: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          created_at: "desc",
+        },
+      });
+
+      res.json(orderHistory);
+    } catch (err) {
+      res.status(500).json({
+        message: "internal-server-error",
+        detail: err,
+      });
+    }
+  },
 };
 
 export default endpoint;

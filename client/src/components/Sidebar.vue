@@ -87,7 +87,7 @@ defineEmits<{
         <div class="space-y-1">
           <SidebarLink :to="'/unit'" :collapsed="collapsed">
             <template #icon><Monitor :size="18" /></template>
-            <template #title>Unit PS</template>
+            <template #title>Unit Konsol</template>
           </SidebarLink>
           <SidebarLink :to="'/fnb'" :collapsed="collapsed">
             <template #icon><Utensils :size="18" /></template>

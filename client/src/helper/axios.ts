@@ -1,5 +1,5 @@
 import Axios from "axios";
-import { useRouter } from "vue-router";
+import router from "../router/index.ts";
 
 const base_url = import.meta.env.VITE_API_URL;
 
@@ -61,8 +61,6 @@ Axios.interceptors.response.use(
     return Promise.reject(err);
   },
 );
-
-const router = useRouter();
 
 export default {
   get: async (url: string, callback: any, errCallback?: any) => {

@@ -8,9 +8,9 @@ interface FnBItem {
   qty: number;
 }
 
+const selectedFnBItems = ref<FnBItem[]>([]);
 export const useFnb = () => {
   const { confirm } = useAlertDialog();
-  const selectedFnBItems = ref<FnBItem[]>([]);
   const sidebarStatus = ref(false);
 
   const removeFnbItem = (item: FnBItem) => {
