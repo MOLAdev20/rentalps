@@ -1,5 +1,5 @@
 import { Router } from "express";
-import orderedFnbController from "../../controllers/orders/orderedFnb.controller.js";
+import orderedFnbController from "../../controllers/orders/orderedFnB.controller.js";
 
 const route = Router();
 

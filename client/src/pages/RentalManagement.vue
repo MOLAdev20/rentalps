@@ -31,13 +31,28 @@ interface Unit {
   };
 }
 
+interface UnitSummary {
+  total: number;
+  playing: number;
+  finished: number;
+  available: number;
+}
+
 const unitData = ref<Unit[]>([]);
+const unitSummary = ref<UnitSummary>({
+  total: 0,
+  playing: 0,
+  finished: 0,
+  available: 0,
+});
 
 onMounted(() => {
   document.title = "Sewa | Rent.Play!";
   axios.get(
     "unit",
     (response: any) => {
+      unitSummary.value = response.data.summary ?? unitSummary.value;
+
       response.data.unit.forEach((el: any) => {
         unitData.value.push({
           id: el.id,
@@ -77,7 +92,9 @@ onMounted(() => {
           <div class="flex items-center justify-between">
             <div>
               <span class="text-xs font-medium text-gray-500">Jumlah Unit</span>
-              <p class="font-display text-xl font-bold">3 Unit</p>
+              <p class="font-display text-xl font-bold">
+                {{ unitSummary.total }} Unit
+              </p>
             </div>
             <span
               class="grid h-8 w-8 place-items-center rounded-lg bg-gray-500 text-white"
@@ -95,7 +112,9 @@ onMounted(() => {
               <span class="text-xs font-medium text-gray-500"
                 >Sedang Disewa</span
               >
-              <p class="font-display text-xl font-bold">2 Unit</p>
+              <p class="font-display text-xl font-bold">
+                {{ unitSummary.playing }} Unit
+              </p>
             </div>
             <span
               class="grid h-8 w-8 place-items-center rounded-lg bg-emerald-500 text-white"
@@ -113,7 +132,9 @@ onMounted(() => {
               <span class="text-xs font-medium text-gray-500"
                 >Selesai Disewa</span
               >
-              <p class="font-display text-xl font-bold">1 Unit</p>
+              <p class="font-display text-xl font-bold">
+                {{ unitSummary.finished }} Unit
+              </p>
             </div>
             <span
               class="grid h-8 w-8 place-items-center rounded-lg bg-amber-600 text-white"
@@ -129,7 +150,9 @@ onMounted(() => {
           <div class="flex items-center justify-between">
             <div>
               <span class="text-xs font-medium text-gray-500">Tersedia</span>
-              <p class="font-display text-xl font-bold">3 Unit</p>
+              <p class="font-display text-xl font-bold">
+                {{ unitSummary.available }} Unit
+              </p>
             </div>
             <span
               class="grid h-8 w-8 place-items-center rounded-lg bg-indigo-600 text-white"

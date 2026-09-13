@@ -105,7 +105,7 @@ const endpoint = {
         };
       });
 
-      await prisma.orders.create({
+      const newOrder = await prisma.orders.create({
         data: {
           order_no: await generateOrderNo(),
           customer_name: req.body.customer_name,
@@ -129,6 +129,10 @@ const endpoint = {
 
       res.json({
         message: "transaction-created",
+        data: {
+          order_id: newOrder.id,
+          order_no: newOrder.order_no,
+        },
       });
     } catch (err: any) {
       res.status(500).json({
@@ -170,7 +174,6 @@ const endpoint = {
               sub_total: true,
               start_time: true,
               end_time: true,
-              status: true,
               unitItem: {
                 select: {
                   title: true,

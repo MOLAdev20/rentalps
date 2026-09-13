@@ -2,7 +2,7 @@ import { ref, computed, type ComputedRef } from "vue";
 import axios from "../../../helper/axios.ts";
 import { useRouter } from "vue-router";
 import { useAlertDialog } from "../../../composables/useAlertDialog.ts";
-import { useFnb } from "./useFnb.ts";
+import { useFnb } from "./useFnbDraft.ts";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 
@@ -115,6 +115,7 @@ export const usePlaySession = (unitId: number) => {
             router.replace({
               name: "rent-detail",
               params: { id: String(unitId) },
+              query: { order: String(response.data.data.order_id) },
             });
         },
         () => {

@@ -8,17 +8,50 @@ const endpoint = {
       const rawUnit = await prisma.unitItem.findMany({
         include: {
           rentedUnitOrder: {
-            where: {
-              status: "playing",
-            },
             select: {
               order_id: true,
               start_time: true,
               end_time: true,
             },
+            orderBy: {
+              id: "desc",
+            },
+            take: 1,
           },
         },
       });
+
+      const now = new Date();
+
+      const summary = rawUnit.reduce(
+        (acc, item) => {
+          acc.total += 1;
+
+          if (item.status === "available") {
+            acc.available += 1;
+          }
+
+          const latestOrder = item.rentedUnitOrder[0];
+
+          if (item.status === "rented" && latestOrder) {
+            const endTime = new Date(latestOrder.end_time);
+
+            if (endTime.getTime() > now.getTime()) {
+              acc.playing += 1;
+            } else {
+              acc.finished += 1;
+            }
+          }
+
+          return acc;
+        },
+        {
+          total: 0,
+          playing: 0,
+          finished: 0,
+          available: 0,
+        },
+      );
 
       const unit = rawUnit.map((item) => {
         let rentedUnitOrder: any = {};
@@ -38,10 +71,11 @@ const endpoint = {
         });
       }
 
-      return res.json({ unit });
+      return res.json({ unit, summary });
     } catch (err) {
       return res.status(500).json({
-        message: "Error creating unit",
+        message: "Error fetch data",
+        err,
       });
     }
   },

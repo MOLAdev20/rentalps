@@ -3,6 +3,7 @@ import { onMounted, ref } from "vue";
 import toast, { Toaster } from "vue3-hot-toast";
 
 import BaseLayout from "../components/__Layout.vue";
+import Modal from "../components/Modal.vue";
 import axios from "../helper/axios.ts";
 
 interface Unit {
@@ -17,13 +18,13 @@ interface Unit {
 
 const title = ref<string>();
 const description = ref<string>();
-const rent_price = ref<number>(3000);
+const rent_price = ref<number>(0);
 const unitData = ref<Unit[]>([]);
 
 const isModalOpen = ref(false);
 
 onMounted(() => {
-  document.title = "Sewa | Rent.Play!";
+  document.title = "Unit Konsol | Rent.Play!";
   fetchData();
 });
 
@@ -102,7 +103,7 @@ const getStatusClass = (status: string) =>
       <div class="mb-6 flex items-center justify-between">
         <div>
           <h1 class="font-display text-2xl font-bold tracking-tight">
-            Master Unit
+            Unit Konsol
           </h1>
           <p class="mt-1 text-sm text-gray-500">
             Tambah, edit atau hapus unit yang sudah ada
@@ -252,89 +253,50 @@ const getStatusClass = (status: string) =>
       </div>
     </section>
 
-    <div v-if="isModalOpen" class="fixed inset-0 z-50">
-      <div class="absolute inset-0 bg-black/50" @click="closeModal" />
-      <div class="relative flex min-h-screen items-center justify-center p-4">
-        <div class="relative w-full max-w-md rounded-2xl bg-white shadow-2xl">
-          <div
-            class="flex items-center justify-between border-b border-gray-100 px-5 py-4"
-          >
-            <h3 class="font-display text-[15px] font-semibold">
-              Tambah Data Baru
-            </h3>
-            <button
-              class="grid h-8 w-8 place-items-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900 cursor-pointer"
-              type="button"
-              @click="closeModal"
-            >
-              <svg
-                class="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
+    <Modal v-model="isModalOpen" title="Tambah Data Baru">
+      <div class="space-y-4">
+        <div>
+          <label class="mb-1.5 block text-sm font-medium">Nama Unit</label>
+          <input
+            type="text"
+            class="h-10 w-full rounded-lg border border-gray-200 px-3.5 text-sm outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            v-model="title"
+          />
+        </div>
 
-          <div class="space-y-4 px-5 py-5">
-            <div>
-              <label class="mb-1.5 block text-sm font-medium">Nama Unit</label>
-              <input
-                type="text"
-                placeholder="Contoh: Serum Wajah 30ml"
-                class="h-10 w-full rounded-lg border border-gray-200 px-3.5 text-sm outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                v-model="title"
-              />
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="mb-1.5 block text-sm font-medium"
-                  >Harga Sewa</label
-                >
-                <input
-                  type="number"
-                  placeholder="Rp0"
-                  class="h-10 w-full rounded-lg border border-gray-200 px-3.5 text-sm outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                  v-model="rent_price"
-                />
-              </div>
-            </div>
-            <div>
-              <label class="mb-1.5 block text-sm font-medium">Deskripsi</label>
-              <textarea
-                class="w-full rounded-lg border border-gray-200 p-2 text-sm outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                v-model="description"
-              ></textarea>
-            </div>
-          </div>
-
-          <div
-            class="flex items-center justify-end gap-2.5 border-t border-gray-100 px-5 py-4"
-          >
-            <button
-              class="h-9 rounded-lg border border-gray-200 px-4 text-sm font-medium transition-colors hover:bg-gray-50 cursor-pointer"
-              type="button"
-              @click="closeModal"
-            >
-              Batal
-            </button>
-            <button
-              class="h-9 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white shadow-md shadow-indigo-200 transition-all hover:bg-indigo-700 active:scale-[0.97] cursor-pointer"
-              type="button"
-              @click="saveData"
-            >
-              Simpan
-            </button>
-          </div>
+        <div>
+          <label class="mb-1.5 block text-sm font-medium">Harga Sewa</label>
+          <input
+            type="number"
+            placeholder="Rp0"
+            class="h-10 w-full rounded-lg border border-gray-200 px-3.5 text-sm outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            v-model="rent_price"
+          />
+        </div>
+        <div>
+          <label class="mb-1.5 block text-sm font-medium">Deskripsi</label>
+          <textarea
+            class="w-full rounded-lg border border-gray-200 p-2 text-sm outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            v-model="description"
+          ></textarea>
         </div>
       </div>
-    </div>
+      <template #footer>
+        <button
+          class="h-9 rounded-lg border border-gray-200 px-4 text-sm font-medium transition-colors hover:bg-gray-50 cursor-pointer"
+          type="button"
+          @click="closeModal"
+        >
+          Batal
+        </button>
+        <button
+          class="h-9 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white shadow-md shadow-indigo-200 transition-all hover:bg-indigo-700 active:scale-[0.97] cursor-pointer"
+          type="button"
+          @click="saveData"
+        >
+          Simpan
+        </button>
+      </template>
+    </Modal>
   </BaseLayout>
 </template>

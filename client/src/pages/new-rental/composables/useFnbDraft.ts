@@ -1,3 +1,24 @@
+/**
+ * ============================================================================
+ * DEVELOPMENT GUIDE: FnB Draft Composable
+ * ============================================================================
+ *
+ * 📌 FUNGSI:
+ * Composable ini digunakan khusus untuk mengelola state FnB secara LOCAL (Client-side)
+ * pada skenario sebelum order tersimpan ke database.
+ *
+ * ⚠️ PERBEDAAN DENGAN `useFnbOrder`:
+ * - Komposable ini HANYA mengubah reactive state di memory.
+ * - TIDAK ADA komunikasi / sync HTTP Request (Axios) ke API backend di dalamnya.
+ * - Semua penambahan/pengurangan item dilakukan di array lokal.
+ *
+ * 💡 KAPAN MENGGUNAKAN INI:
+ * Digunakan ketika user masih memilih/merancang orderan (Drafting) dan belum
+ * memiliki `order_id` resmi dari database.
+ *
+ * ============================================================================
+ */
+
 import { ref, type ComputedRef, computed } from "vue";
 import { useAlertDialog } from "../../../composables/useAlertDialog";
 
@@ -8,9 +29,9 @@ interface FnBItem {
   qty: number;
 }
 
+const selectedFnBItems = ref<FnBItem[]>([]);
 export const useFnb = () => {
   const { confirm } = useAlertDialog();
-  const selectedFnBItems = ref<FnBItem[]>([]);
   const sidebarStatus = ref(false);
 
   const removeFnbItem = (item: FnBItem) => {

@@ -5,7 +5,7 @@ const endpoint = {
   addToOrder: async (req: Request, res: Response) => {
     const orderId = Number(req.body.order_id);
     const fnbId = req.body.fnb_id;
-
+    console.log(orderId, fnbId);
     try {
       const selectedFnb = await prisma.fnBItem.findUniqueOrThrow({
         where: { id: fnbId },
@@ -44,7 +44,8 @@ const endpoint = {
       });
     } catch (err) {
       res.status(500).json({
-        message: "error-update-data",
+        message: "internal-server-error",
+        e: "e",
         err: err,
       });
     }

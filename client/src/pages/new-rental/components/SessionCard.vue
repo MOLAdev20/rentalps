@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { formatRupiah } from "../../../helper";
+import formatRupiah from "../../../helper/currency";
 import { MinusCircleIcon, PlusCircleIcon } from "@lucide/vue";
 
 const customerName = defineModel<string>("customer-name");
