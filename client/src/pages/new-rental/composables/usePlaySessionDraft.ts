@@ -1,4 +1,4 @@
-import { ref, computed, type ComputedRef } from "vue";
+import { ref, computed, type ComputedRef, onMounted, onUnmounted } from "vue";
 import axios from "../../../helper/axios.ts";
 import { useRouter } from "vue-router";
 import { useAlertDialog } from "../../../composables/useAlertDialog.ts";
@@ -42,10 +42,6 @@ export const usePlaySession = (unitId: number) => {
     );
   };
 
-  const resetInterval = () => {
-    clearInterval(tick);
-  };
-
   const estimatedEndTime: ComputedRef<string> = computed(() => {
     if (!playDuration.value) return "-";
 
@@ -57,7 +53,7 @@ export const usePlaySession = (unitId: number) => {
   });
 
   const decreasePlayDuration = () => {
-    if (playDuration.value > 0) {
+    if (playDuration.value > 1) {
       playDuration.value--;
     }
   };
@@ -135,6 +131,14 @@ export const usePlaySession = (unitId: number) => {
 
   const grandTotal = computed(() => totalRentPrice.value + fnbTotal.value);
 
+  onMounted(() => {
+    loadSession();
+  });
+
+  onUnmounted(() => {
+    clearInterval(tick);
+  });
+
   return {
     customerName,
     playDuration,
@@ -142,11 +146,9 @@ export const usePlaySession = (unitId: number) => {
     todaysFormattedDate,
     unitTitle,
     unitRentPrice,
-    loadSession,
     estimatedEndTime,
     decreasePlayDuration,
     increasePlayDuration,
-    resetInterval,
     startPlay,
     grandTotal,
     totalRentPrice,
