@@ -1,14 +1,9 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, computed, ref } from "vue";
 import BaseLayout from "../../components/__Layout.vue";
-import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
-import "dayjs/locale/id.js";
 import FnbItemSidebar from "../../components/FnbItemSidebar.vue";
 import SessionCard from "./components/SessionCard.vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 import AlertDialog from "../../components/AlertDialog.vue";
-import { useAlertDialog } from "../../composables/useAlertDialog.ts";
 import {
   ArrowLeftCircle,
   CheckCircle,
@@ -21,284 +16,43 @@ import {
   Trash,
   Wallet,
 } from "@lucide/vue";
-import { formatRupiah } from "../../helper/index.ts";
-import axios from "../../helper/axios.ts";
+import formatRupiah from "../../helper/currency.ts";
 import RentedHistorySidebar from "../../components/RentedHistorySidebar.vue";
-
-dayjs.extend(utc);
+import { useOrderPage } from "./composables/useOrderPage.ts";
 
 const props = defineProps({
   id: String,
 });
-const router = useRouter();
-const { alert, confirm } = useAlertDialog();
 
-const paymentMethod = ref<string>("");
-const paymentLink = ref<{
-  snap_url: string;
-  snap_expiry: string;
-  status: string;
-}>({
-  snap_url: "",
-  snap_expiry: "",
-  status: "",
-});
-const paymentSelectionMode = ref<boolean>(true);
-const showQrisModal = ref(false);
-const qrisUrl = ref<string>("");
-const isLoadingQris = ref(false);
-const turnOfUnit = ref<boolean>(false);
-const paymentStatus = ref<string>("pending");
-
-// ================= Data Sesi =================
-const orderId = ref<number>(0);
-const customerName = ref<string>("");
-const rentedUnit = ref<string>("");
-const rawStartTime = ref<dayjs.Dayjs>(dayjs());
-const rawEndTime = ref<dayjs.Dayjs>(dayjs());
-const playDuration = ref<number>(0);
-const rentPricePerHour = ref<number>(0);
-
-// ================= Data FnB =================
-interface FnbItem {
-  id: number;
-  name: string;
-  price: number;
-}
-
-interface OrderedFnbItem {
-  id: number; // order id
-  fnb_item_id: number;
-  name: string;
-  price: number;
-  qty: number;
-}
-
-const fnbItems = ref<OrderedFnbItem[]>([]);
-const sidebarStatus = ref<boolean>(false);
-const rentedHistorySidebarStatus = ref<boolean>(false);
-
-const openRentHistorySidebar = () => {
-  rentedHistorySidebarStatus.value = true;
-};
-
-// ================= Sidebar & Toast =================
-const toastMessage = ref("");
-let toastTimeout: ReturnType<typeof setTimeout> | undefined;
-
-function showToast(message: string) {
-  toastMessage.value = message;
-  clearTimeout(toastTimeout);
-  toastTimeout = setTimeout(() => {
-    toastMessage.value = "";
-  }, 2200);
-}
-
-const modifyFnbQty = async (orderId: number, type: "increase" | "decrease") =>
-  axios.patch(`order/fnb-item/change-qty/${orderId}/${type}`, () => {});
-
-async function incrementQty(item: OrderedFnbItem) {
-  try {
-    await modifyFnbQty(item.id, "increase");
-    item.qty += 1;
-  } catch (err) {}
-}
-
-async function decrementQty(item: OrderedFnbItem) {
-  if (item.qty <= 1) {
-    removeFnbItem(item.id);
-    return;
-  }
-  await modifyFnbQty(item.id, "decrease");
-  item.qty -= 1;
-}
-
-const pickFnbItem = async (catalogItem: FnbItem) => {
-  axios.post(
-    "order/fnb-item/add",
-    {
-      order_id: orderId.value,
-      fnb_id: catalogItem.id,
-    },
-    (response: any) => {
-      const existing = fnbItems.value.find(
-        (i) => i.fnb_item_id === catalogItem.id,
-      );
-      if (existing) {
-        existing.qty += 1;
-      } else {
-        fnbItems.value.push({
-          ...catalogItem,
-          id: response.data.newFnbOrder.id,
-          fnb_item_id: catalogItem.id,
-          qty: 1,
-        });
-        console.log(fnbItems.value);
-      }
-
-      showToast(`${catalogItem.name} ditambahkan`);
-    },
-  );
-
-  setTimeout(() => (sidebarStatus.value = false), 250);
-};
-
-function removeFnbItem(id: number) {
-  confirm({
-    title: "Hapus Item?",
-    message: "Apakah kamu yakin?",
-    variant: "warning",
-  }).then((result) => {
-    if (result) {
-      fnbItems.value = fnbItems.value.filter((i) => i.id !== id);
-      axios.delete("order/fnb-item/" + id, () => {});
-    }
-  });
-}
-
-// ================= Format & Perhitungan =================
-const unitRentTotal = computed(
-  () => rentPricePerHour.value * playDuration.value,
-);
-
-const fnbTotal = computed(() =>
-  fnbItems.value.reduce((sum, item) => sum + item.price * item.qty, 0),
-);
-
-const grandTotal = computed(() => unitRentTotal.value + fnbTotal.value);
-
-// ================= Lifecycle =================
 const route = useRoute();
-onMounted(() => {
-  axios.get(
-    `order/by-unit/${props.id}${route.query.order ? "?order=" + route.query.order : ""}`,
-    (response: any) => {
-      const { id, status, customer_name, rentedUnitOrder, transaction } =
-        response.data;
 
-      orderId.value = id;
-      customerName.value = customer_name;
-      rentedUnit.value = rentedUnitOrder[0].unitItem.title;
-      rawStartTime.value = rentedUnitOrder[0].start_time;
-      rawEndTime.value = rentedUnitOrder[0].end_time;
-      paymentStatus.value = status;
-
-      console.log(response.data);
-
-      if (transaction.length > 0) {
-        if (transaction[0].payment_method != "pending_payment") {
-          paymentMethod.value = transaction[0].payment_method;
-        }
-
-        console.log(paymentMethod.value);
-        if (paymentMethod.value === "qris") {
-          paymentLink.value = transaction[0];
-          qrisUrl.value = paymentLink.value.snap_url;
-
-          paymentSelectionMode.value = false;
-        }
-      }
-
-      playDuration.value = rentedUnitOrder[0].play_time;
-      rentPricePerHour.value = rentedUnitOrder[0].unitItem.rent_price;
-
-      const fnbItemOrder = response.data.fnbItemOrder;
-      fnbItemOrder.forEach((item: any) => {
-        fnbItems.value.push({
-          id: item.id,
-          fnb_item_id: item.fnbItem.id,
-          name: item.fnbItem.title,
-          price: item.fnbItem.price,
-          qty: item.quantity,
-        });
-      });
-    },
-    (err: any) => {
-      console.log(err);
-      // router.replace({
-      //   name: "NotFound",
-      // });
-    },
-  );
-});
-
-onUnmounted(() => {
-  clearTimeout(toastTimeout);
-});
-
-const handlePayment = async () => {
-  if (paymentMethod.value == "") {
-    return;
-  }
-
-  confirm({
-    title: "Lanjutkan Pembayaran?",
-    message: "Mohon siapkan uang tunai atau metode pembayaran yang dipilih",
-    variant: "warning",
-  }).then((result) => {
-    if (result) {
-      if (paymentMethod.value === "qris") {
-        axios.post(
-          "transaction/payment/generate-qris",
-          {
-            order_id: orderId.value,
-          },
-          (response: any) => {
-            const { snap_url } = response.data.transaction;
-
-            if (!snap_url) {
-              throw new Error("Snap URL tidak ditemukan");
-            }
-
-            qrisUrl.value = snap_url;
-            showQrisModal.value = true;
-            paymentSelectionMode.value = false;
-          },
-          (err: any) => {
-            console.log(err);
-            showToast("Gagal membuat QRIS. Silakan coba lagi.");
-          },
-        );
-        isLoadingQris.value = false;
-      } else {
-        // Logic bayar tunai biasa
-        axios.post(
-          `transaction/payment/proceed-payment`,
-          {
-            order_id: orderId.value,
-            payment_method: paymentMethod.value,
-            turn_off_unit: turnOfUnit.value ? 1 : 0,
-          },
-          () => {
-            alert({
-              title: "Pembayaran Berhasil",
-              message: "Terimakasih telah bermain!",
-              variant: "success",
-            });
-            // router.push({ name: "rent" });
-          },
-          () => {
-            showToast("Gagal meyimpan pembayaran. Silakan coba lagi.");
-          },
-        );
-      }
-    }
-  });
-};
-
-const switchPaymentMode = async () => {
-  const isAccept = await confirm({
-    title: "Ganti Metode Pembayaran?",
-    message: "Apakah kamu yakin?",
-    confirmText: "Ya, Ganti",
-    cancelText: "Batal",
-    variant: "warning",
-  });
-
-  if (isAccept) {
-    paymentSelectionMode.value = true;
-  }
-};
+const {
+  customerName,
+  rentedUnit,
+  rawStartTime,
+  rawEndTime,
+  playDuration,
+  fnbItems,
+  fnbTotal,
+  unitRentTotal,
+  paymentStatus,
+  paymentMethod,
+  paymentSelectionMode,
+  qrisUrl,
+  showQrisModal,
+  isLoadingQris,
+  turnOffUnit,
+  sidebarStatus,
+  pickFnbItem,
+  incrementQty,
+  decrementQty,
+  removeFnbItem,
+  handlePayment,
+  switchPaymentMode,
+  openRentHistorySidebar,
+  rentedHistorySidebarStatus,
+  grandTotal,
+} = useOrderPage(Number(props.id), Number(route.query.order));
 </script>
 
 <template>
@@ -524,7 +278,7 @@ const switchPaymentMode = async () => {
                   </div>
 
                   <div class="mt-5 pt-1 border-t border-gray-100 flex gap-2">
-                    <input v-model="turnOfUnit" type="checkbox" id="turn-of" />
+                    <input v-model="turnOffUnit" type="checkbox" id="turn-of" />
                     <label for="turn-of">Matikan unitnya juga</label>
                   </div>
 
@@ -631,40 +385,7 @@ const switchPaymentMode = async () => {
       v-if="rentedUnit"
       v-model:sidebar-status="rentedHistorySidebarStatus"
       :unitId="Number(props.id)"
-      @pick-fnb-item="pickFnbItem"
     />
-
-    <!-- ============ Toast ============ -->
-    <Teleport to="body">
-      <Transition
-        enter-active-class="transition-all duration-300 ease-out"
-        enter-from-class="opacity-0 translate-y-2"
-        enter-to-class="opacity-100 translate-y-0"
-        leave-active-class="transition-all duration-200 ease-in"
-        leave-from-class="opacity-100 translate-y-0"
-        leave-to-class="opacity-0 translate-y-2"
-      >
-        <div
-          v-if="toastMessage"
-          class="fixed bottom-6 right-6 px-4 py-3 rounded-xl bg-gray-900 text-white text-sm font-medium shadow-xl flex items-center gap-2"
-        >
-          <svg
-            class="w-4 h-4 text-emerald-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
-          {{ toastMessage }}
-        </div>
-      </Transition>
-    </Teleport>
   </BaseLayout>
   <AlertDialog />
 </template>

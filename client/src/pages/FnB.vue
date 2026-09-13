@@ -5,7 +5,7 @@ import toast, { Toaster } from "vue3-hot-toast";
 import BaseLayout from "../components/__Layout.vue";
 import Modal from "../components/Modal.vue";
 import axios from "../helper/axios.ts";
-import { formatRupiah } from "../helper/currency.ts";
+import formatRupiah from "../helper/currency.ts";
 import { Plus, Utensils } from "@lucide/vue";
 
 interface FnbItem {

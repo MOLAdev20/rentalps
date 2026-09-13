@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from "vue";
 import axios from "../helper/axios";
 import { CircleX, PlusCircleIcon, Search, Utensils } from "@lucide/vue";
-import { formatRupiah } from "../helper";
+import formatRupiah from "../helper/currency";
 
 type Item = {
   id: number;

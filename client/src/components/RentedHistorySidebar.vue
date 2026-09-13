@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import axios from "../helper/axios";
-import { CircleX, Search } from "@lucide/vue";
-import { formatRupiah } from "../helper";
+import { CircleX, Search, Clock, Calendar } from "@lucide/vue";
+import formatRupiah from "../helper/currency";
 import { useRouter } from "vue-router";
 
 type RentalHistory = {
@@ -30,7 +30,6 @@ onMounted(() => {
   axios.get(
     `transaction/unit-history/${props.unitId}`,
     (data: any) => {
-      console.log("Rental history data:", data.data); // Debugging log
       data.data.map((item: any) => {
         rentalHistoryList.value.push({
           id: item.id,
@@ -115,7 +114,6 @@ const goToDetail = (orderId: any) => {
           class="px-5 py-4 border-b border-gray-100 flex items-center justify-between shrink-0"
         >
           <div class="flex items-center gap-2">
-            <History :size="18" class="text-indigo-600" />
             <h3 class="font-display font-semibold text-[15px] text-gray-900">
               Riwayat Sewa
             </h3>

@@ -4,10 +4,10 @@ import BaseLayout from "../../components/__Layout.vue";
 import FnbItemSidebar from "../../components/FnbItemSidebar.vue";
 import { PlayCircle, PlusCircleIcon, Trash } from "@lucide/vue";
 import AlertDialog from "../../components/AlertDialog.vue";
-import { formatRupiah } from "../../helper/currency.ts";
+import formatRupiah from "../../helper/currency.ts";
 import SessionCard from "./components/SessionCard.vue";
-import { useFnb } from "./composables/useFnb.ts";
-import { usePlaySession } from "./composables/usePlaySession.ts";
+import { useFnb } from "./composables/useFnbDraft.ts";
+import { usePlaySession } from "./composables/usePlaySessionDraft.ts";
 
 const props = defineProps<{
   unitId: String;

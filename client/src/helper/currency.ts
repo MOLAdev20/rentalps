@@ -1,8 +1,10 @@
-export function formatRupiah(angka: number): string {
+const formatRupiah = (angka: number): string => {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(angka);
-}
+};
+
+export default formatRupiah;

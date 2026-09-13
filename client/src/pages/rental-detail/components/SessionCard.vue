@@ -4,7 +4,9 @@ import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import { Trash } from "@lucide/vue";
 import { useAlertDialog } from "../../../composables/useAlertDialog";
+import utc from "dayjs/plugin/utc";
 dayjs.extend(duration);
+dayjs.extend(utc);
 
 const props = defineProps<{
   customerName: string;
