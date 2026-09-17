@@ -1,47 +1,36 @@
 <script setup lang="ts">
 import formatRupiah from "../../../helper/currency";
-import { MinusCircleIcon, PlusCircleIcon } from "@lucide/vue";
+import { MinusCircleIcon, PlusCircleIcon, User } from "@lucide/vue";
+import { usePlaySession } from "../composables/usePlaySessionDraft";
 
-const customerName = defineModel<string>("customer-name");
 const props = defineProps<{
-  todaysFormattedDate: string;
-  currentTime: string;
-  unitRentPrice: number;
-  playDuration: number;
-  estimatedEndTime: string;
-  totalRentPrice: number;
+  unitId: number;
 }>();
 
-const emit = defineEmits<{
-  decreasePlayDuration: [value: number];
-  increasePlayDuration: [value: number];
-}>();
+const {
+  customerName,
+  todaysFormattedDate,
+  currentTime,
+  unitRentPrice,
+  playDuration,
+  estimatedEndTime,
+  totalRentPrice,
+  increasePlayDuration,
+  decreasePlayDuration,
+} = usePlaySession(props.unitId);
 </script>
 <template>
   <div
     class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden"
   >
     <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-      <svg
-        class="w-4 h-4 text-indigo-600"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        stroke-width="2"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-        />
-      </svg>
+      <User :size="18" class="text-indigo-500" />
       <h3 class="font-display font-semibold text-[15px] text-gray-900">
         Informasi Sesi
       </h3>
     </div>
 
     <div class="p-5 space-y-4">
-      <!-- Nama Penyewa jadi input, bukan teks statis -->
       <div>
         <label class="text-xs text-gray-500 mb-1.5 block">Nama Penyewa</label>
         <input
@@ -55,14 +44,12 @@ const emit = defineEmits<{
       <div class="flex items-center justify-between">
         <span class="text-xs text-gray-500">Tanggal Main</span>
         <span class="text-sm font-medium text-gray-700">{{
-          props.todaysFormattedDate
+          todaysFormattedDate
         }}</span>
       </div>
       <div class="flex items-center justify-between">
         <span class="text-xs text-gray-500">Waktu Main</span>
-        <span class="text-sm font-medium text-gray-700">{{
-          props.currentTime
-        }}</span>
+        <span class="text-sm font-medium text-gray-700">{{ currentTime }}</span>
       </div>
 
       <!-- Durasi Sewa, gantiin blok "Sisa Waktu" -->
@@ -92,7 +79,7 @@ const emit = defineEmits<{
 
         <div class="flex items-center justify-center gap-5 py-1">
           <button
-            @click="emit('decreasePlayDuration', props.playDuration)"
+            @click="decreasePlayDuration"
             class="p-2 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 active:scale-95 transition-all cursor-pointer"
           >
             <MinusCircleIcon :size="18" />
@@ -100,13 +87,13 @@ const emit = defineEmits<{
 
           <div class="text-center w-16">
             <p class="font-mono text-3xl font-bold text-gray-900 tabular-nums">
-              {{ props.playDuration }}
+              {{ playDuration }}
             </p>
             <p class="text-[11px] text-gray-400 -mt-1">Jam</p>
           </div>
 
           <button
-            @click="emit('increasePlayDuration', props.playDuration)"
+            @click="increasePlayDuration"
             class="p-2 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 active:scale-95 transition-all cursor-pointer"
           >
             <PlusCircleIcon :size="18" />
@@ -118,7 +105,7 @@ const emit = defineEmits<{
         >
           <span class="text-gray-500">Estimasi Selesai</span>
           <span class="font-semibold text-gray-700">{{
-            props.estimatedEndTime
+            estimatedEndTime
           }}</span>
         </div>
       </div>
@@ -126,7 +113,7 @@ const emit = defineEmits<{
       <div class="flex items-center justify-between pt-1">
         <span class="text-xs text-gray-500">Total Biaya Sewa</span>
         <span class="text-sm font-bold text-gray-900">{{
-          formatRupiah(props.totalRentPrice)
+          formatRupiah(totalRentPrice)
         }}</span>
       </div>
     </div>

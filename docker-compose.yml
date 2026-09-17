@@ -1,0 +1,59 @@
+services:
+  db:
+    image: mariadb:12.3
+    container_name: app_mariadb
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: rentalps
+      MARIADB_USER: devroot
+      MARIADB_PASSWORD: devroot
+    ports:
+      - "3307:3306"
+    volumes:
+      - shared_mariadb_data:/var/lib/mysql
+    networks:
+      - app-network
+
+  # 2. SERVICE BACKEND (Express TS)
+  backend:
+    build:
+      context: ./api # Arahkan ke folder backend lu
+      dockerfile: Dockerfile
+    container_name: app_backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      # Menggunakan nama service 'db' sebagai host database
+      DATABASE_URL: "mysql://devroot:devroot@db:3306/rentalps"
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+  # 3. SERVICE FRONTEND (Vue + Nginx)
+  frontend:
+    build:
+      context: ./client # Arahkan ke folder frontend lu
+      dockerfile: Dockerfile
+    container_name: app_frontend
+    restart: always
+    ports:
+      - "8080:80" # Akses Vue di browser via http://localhost:8080
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+# PERSISTENSI DATA DATABASE
+volumes:
+  shared_mariadb_data:
+    driver: local
+
+# NETWORK INTERNAL UNTUK KOMUNIKASI ANTAR CONTAINER
+networks:
+  app-network:
+    driver: bridge

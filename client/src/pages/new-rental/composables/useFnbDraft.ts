@@ -30,9 +30,9 @@ interface FnBItem {
 }
 
 const selectedFnBItems = ref<FnBItem[]>([]);
+const sidebarStatus = ref(false);
 export const useFnb = () => {
   const { confirm } = useAlertDialog();
-  const sidebarStatus = ref(false);
 
   const removeFnbItem = (item: FnBItem) => {
     confirm({
