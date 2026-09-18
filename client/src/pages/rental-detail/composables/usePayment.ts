@@ -2,7 +2,7 @@ import { ref } from "vue";
 import { useAlertDialog } from "../../../composables/useAlertDialog";
 import axios from "../../../helper/axios";
 
-const { confirm } = useAlertDialog();
+const { alert, confirm } = useAlertDialog();
 
 const usePayment = (orderId: number) => {
   const paymentMethod = ref<string>("");

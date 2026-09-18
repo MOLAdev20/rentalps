@@ -63,7 +63,7 @@ const formatRemainingTimeToPercentage = (
 };
 
 const cancelRent = async () => {
-  const cnf = await confirm({
+  await confirm({
     title: "Batalkan Sewa?",
     message: "Unit akan dibatalkan status sewanya",
     variant: "warning",
