@@ -7,5 +7,6 @@ route.post("/", authController.login);
 route.get("/verify", authController.verify);
 route.post("/register", authController.register);
 route.post("/refresh-token", authController.refreshToken);
+route.post("/logout", authController.logout);
 
 export default route;

@@ -78,7 +78,7 @@ onMounted(() => {
         });
       });
     },
-    (err: any) => {
+    () => {
       toast.error("Data gagal dimuat. Harap coba lagi");
     },
   );

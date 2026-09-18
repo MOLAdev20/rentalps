@@ -2,6 +2,7 @@
 import {
   CirclePlay,
   LayoutDashboard,
+  LogOut,
   Monitor,
   ScrollText,
   Utensils,
@@ -9,6 +10,7 @@ import {
 } from "@lucide/vue";
 import SidebarLink from "./SidebarLink.vue";
 import icon from "/icon.png";
+import axios from "../helper/axios";
 
 defineProps<{
   collapsed: boolean;
@@ -18,6 +20,10 @@ defineProps<{
 defineEmits<{
   (event: "toggle-collapse"): void;
 }>();
+
+const handleLogout = () => {
+  axios.logout();
+};
 </script>
 
 <template>
@@ -120,9 +126,9 @@ defineEmits<{
       <span :class="collapsed ? 'lg:hidden' : ''">Ciutkan</span>
     </button>
 
-    <div class="border-t border-white/10 p-3">
+    <div class="border-t border-white/10 p-3 space-y-1">
       <div
-        class="flex h-12 cursor-pointer items-center gap-3 rounded-lg px-2 transition-colors hover:bg-white/5"
+        class="flex h-12 items-center gap-3 rounded-lg px-2"
         :class="collapsed ? 'lg:justify-center lg:px-0' : ''"
       >
         <img
@@ -131,13 +137,24 @@ defineEmits<{
           alt="avatar"
         />
         <div
-          class="leading-tight overflow-hidden"
+          class="leading-tight overflow-hidden flex-1"
           :class="collapsed ? 'lg:hidden' : ''"
         >
-          <p class="truncate text-sm font-medium text-white">Sabilul</p>
-          <p class="truncate text-xs text-slate-500">Administrator</p>
+          <p class="truncate text-sm font-medium text-white">Administrator</p>
+          <p class="truncate text-xs text-slate-500">Rent.Play!</p>
         </div>
       </div>
+
+      <!-- Tombol Logout -->
+      <button
+        @click="handleLogout"
+        class="flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:bg-red-500/10 hover:text-red-400 cursor-pointer"
+        :class="collapsed ? 'lg:justify-center lg:px-0' : ''"
+        type="button"
+      >
+        <LogOut :size="18" class="shrink-0" />
+        <span :class="collapsed ? 'lg:hidden' : ''">Keluar</span>
+      </button>
     </div>
   </aside>
 </template>

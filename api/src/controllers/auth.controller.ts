@@ -45,12 +45,26 @@ const endpoint = {
         "1d",
       );
 
+      const userAgent =
+        (req.headers["user-agent"] as string) ||
+        req.body.user_agent ||
+        "Browser";
+      const rawIp =
+        (req.headers["x-forwarded-for"] as string) ||
+        req.ip ||
+        req.socket.remoteAddress ||
+        "127.0.0.1";
+      const ipAddress = (
+        (Array.isArray(rawIp) ? rawIp[0] : String(rawIp).split(",")[0]) ||
+        "127.0.0.1"
+      ).trim();
+
       await prisma.userRefreshToken.create({
         data: {
           user_id: userExists.id,
-          user_agent: "Browser",
+          user_agent: userAgent,
           is_revoked: false,
-          ip_address: "192.168.0.1",
+          ip_address: ipAddress,
           token: refreshToken,
           expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
         },
@@ -128,30 +142,48 @@ const endpoint = {
 
   refreshToken: async (req: Request, res: Response) => {
     const userId: number = Number(req.body.user_id);
+    const userAgent =
+      (req.headers["user-agent"] as string) || req.body.user_agent || "Browser";
+    const rawIp =
+      (req.headers["x-forwarded-for"] as string) ||
+      req.ip ||
+      req.socket.remoteAddress ||
+      "127.0.0.1";
+    const ipAddress = (
+      (Array.isArray(rawIp) ? rawIp[0] : String(rawIp).split(",")[0]) ||
+      "127.0.0.1"
+    ).trim();
 
     try {
-      const refreshToken = await prisma.userRefreshToken.findFirstOrThrow({
-        select: { token: true },
-        where: {
-          user_id: userId,
+      const refreshTokenRecord = await prisma.userRefreshToken.findFirstOrThrow(
+        {
+          where: {
+            user_id: userId,
+            is_revoked: false,
+          },
+          orderBy: {
+            id: "desc",
+          },
         },
-      });
+      );
 
-      // const isTokenValid = await jwt.verify(
-      //   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhbWluIiwiaWF0IjoxNzg3MjI4OTA3LCJleHAiOjE3ODczMTUzMDd9.3GKaLF2KltMOr6FaP7Z8zPnsWHvWhPqXVaPVSFZjYdY",
-      // );
-
-      const isTokenValid = jwt.verify(refreshToken.token);
-
-      console.log(isTokenValid);
+      const isTokenValid = jwt.verify(refreshTokenRecord.token);
 
       const newToken = jwt.signToken(
         {
           id: isTokenValid.id,
           username: isTokenValid.username,
         },
-        "1m",
+        "15m",
       );
+
+      await prisma.userRefreshToken.update({
+        where: { id: refreshTokenRecord.id },
+        data: {
+          user_agent: userAgent,
+          ip_address: ipAddress,
+        },
+      });
 
       res.json({
         token: newToken,
@@ -167,6 +199,28 @@ const endpoint = {
         message: "error",
         err,
       });
+    }
+  },
+
+  logout: async (req: Request, res: Response) => {
+    try {
+      const rawToken = req.headers.authorization;
+
+      if (!rawToken) {
+        return res.status(401).json({ message: "unauthorized" });
+      }
+
+      const token = rawToken.split(" ")[1]!;
+      const payload = jwt.verify(token) as { id: number };
+      const userId = payload.id;
+
+      await prisma.userRefreshToken.deleteMany({
+        where: { user_id: userId },
+      });
+
+      res.json({ message: "success" });
+    } catch (err) {
+      res.status(500).json({ message: "error", err });
     }
   },
 };

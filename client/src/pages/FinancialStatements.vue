@@ -162,7 +162,7 @@ const fetchFinancialData = async () => {
         renderCharts();
       }
     },
-    (err: any) => {
+    () => {
       toast.error("Gagal memuat data laporan keuangan.");
     },
   );

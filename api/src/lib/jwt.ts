@@ -14,6 +14,6 @@ export default {
   },
 
   verify: (token: string) => {
-    return jwt.verify(token, env.JWT_SECRET_KEY);
+    return jwt.verify(token, env.JWT_SECRET_KEY) as jwtPayload;
   },
 };

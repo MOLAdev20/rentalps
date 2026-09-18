@@ -8,8 +8,8 @@ import utc from "dayjs/plugin/utc";
 
 const { fnbTotal, selectedFnBItems } = useFnb();
 
+const customerName = ref<string>();
 export const usePlaySession = (unitId: number) => {
-  const customerName = ref<string>();
   const currentTime = ref<string>(dayjs().format("HH:mm:ss"));
   const playDuration = ref<number>(1);
   const unitTitle = ref<string>();

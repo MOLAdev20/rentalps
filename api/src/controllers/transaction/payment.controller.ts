@@ -156,9 +156,9 @@ const endpoint = {
 
   notification: async (req: Request, res: Response) => {
     try {
-      const notification = await snap.transaction.notification(req.body);
-
-      console.log(notification);
+      const notification = await (snap as any).transaction.notification(
+        req.body,
+      );
 
       const transactionStatus: string = notification.transaction_status;
       const transactionNumber: string = notification.order_id;
