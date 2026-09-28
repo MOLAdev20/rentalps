@@ -138,41 +138,56 @@ const fetchFinancialData = async () => {
       start_date: startDate.value,
       end_date: endDate.value,
     },
-    (response: any) => {
+    async (response: any) => {
       const resData = response.data;
+
+      // 1. Destroy semua chart lama terlebih dahulu
+      destroyCharts();
 
       if (resData.summary.totalTransaction === 0) {
         isEmpty.value = true;
       } else {
         isEmpty.value = false;
         summary.value = resData.summary;
-        resData.recapitulation.map((item: any) => {
-          recapitulationData.value.push({
-            date: dayjs(item.date).format("DD-MM-YYYY").toString(),
-            trx: item.trx,
-            rental: item.rental,
-            fnb: item.fnb,
-            cash: item.cash,
-            qris: item.qris,
-            total: item.total,
-          });
-        });
 
-        nextTick();
+        // Re-assign array langsung biar bersih
+        recapitulationData.value = resData.recapitulation.map((item: any) => ({
+          date: dayjs(item.date).format("DD-MM-YYYY").toString(),
+          trx: item.trx,
+          rental: item.rental,
+          fnb: item.fnb,
+          cash: item.cash,
+          qris: item.qris,
+          total: item.total,
+        }));
+
+        // 2. TUNGGU Vue selesai merender ulang elemen <canvas> ke DOM
+        await nextTick();
+
+        // 3. Render chart setelah DOM <canvas> dipastikan sudah mount
         renderCharts();
       }
+
+      loading.value = false;
     },
     () => {
+      loading.value = false;
       toast.error("Gagal memuat data laporan keuangan.");
     },
   );
+};
 
-  loading.value = false;
+// Helper khusus buat destroy & reset reference chart
+const destroyCharts = () => {
+  Object.keys(charts.value).forEach((key) => {
+    if (charts.value[key]) {
+      charts.value[key]?.destroy();
+      charts.value[key] = null;
+    }
+  });
 };
 
 const renderCharts = () => {
-  Object.values(charts.value).forEach((chart) => chart?.destroy());
-
   const commonOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -184,7 +199,7 @@ const renderCharts = () => {
     },
   };
 
-  // 1. Line Chart
+  // Pastikan canvas DOM benar-benar ada sebelum instance new Chart
   if (lineChartCanvas.value) {
     charts.value.line = new Chart(lineChartCanvas.value, {
       type: "line",
@@ -212,7 +227,6 @@ const renderCharts = () => {
     });
   }
 
-  // 2. Donut Chart
   if (donutChartCanvas.value) {
     charts.value.donut = new Chart(donutChartCanvas.value, {
       type: "doughnut",
@@ -233,7 +247,6 @@ const renderCharts = () => {
     });
   }
 
-  // 3. Bar Chart
   if (barChartCanvas.value) {
     charts.value.bar = new Chart(barChartCanvas.value, {
       type: "bar",
@@ -271,7 +284,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener("click", closeFilterOnOutside);
-  Object.values(charts.value).forEach((chart) => chart?.destroy());
+  destroyCharts();
 });
 </script>
 
