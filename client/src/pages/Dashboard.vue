@@ -22,6 +22,7 @@ import {
   ArrowRight,
   Plus,
   ShoppingBag,
+  Box,
 } from "@lucide/vue";
 
 document.title = "Dasbor | Rent.Play!";
@@ -596,8 +597,15 @@ onUnmounted(() => {
               <ArrowRight class="h-3.5 w-3.5" />
             </RouterLink>
           </div>
-          <div class="relative h-64 w-full">
+          <div class="relative w-full" v-if="todayFinancial.total != 0">
             <canvas ref="barChartCanvas"></canvas>
+          </div>
+          <div
+            class="flex flex-col h-64 justify-center items-center w-full"
+            v-else
+          >
+            <Box class="text-indigo-500 mb-3" :size="64" />
+            <h1>Belum ada transaksi</h1>
           </div>
         </div>
 

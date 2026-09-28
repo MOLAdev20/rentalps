@@ -3,6 +3,30 @@ import { prisma } from "../../lib/prisma.js";
 import midtransClient from "midtrans-client";
 import env from "../../config/env.js";
 
+const sseClients = new Map<number, Set<Response>>();
+
+const removeSseClient = (orderId: number, res: Response) => {
+  const clients = sseClients.get(orderId);
+  if (!clients) return;
+
+  clients.delete(res);
+  if (clients.size === 0) {
+    sseClients.delete(orderId);
+  }
+};
+
+const broadcastPaymentComplete = (orderId: number) => {
+  const clients = sseClients.get(orderId);
+  if (!clients) return;
+
+  const message = `data: ${JSON.stringify({ status: "complete" })}\n\n`;
+  for (const client of clients) {
+    client.write(message);
+    client.end();
+    removeSseClient(orderId, client);
+  }
+};
+
 const snap = new midtransClient.Snap({
   isProduction: false,
   serverKey: env.MIDTRANS.SERVER_KEY,
@@ -38,6 +62,40 @@ const generateTransactionNo = async (): Promise<string> => {
 };
 
 const endpoint = {
+  sse: (req: Request, res: Response) => {
+    const orderId = Number(req.params.orderId);
+
+    if (!Number.isInteger(orderId) || orderId <= 0) {
+      return res.status(400).json({ message: "invalid-order-id" });
+    }
+
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    });
+    res.flushHeaders();
+    res.write(`retry: 5000\n\n`);
+
+    const clients = sseClients.get(orderId) ?? new Set<Response>();
+    clients.add(res);
+    sseClients.set(orderId, clients);
+
+    const heartbeat = setInterval(() => {
+      if (!res.writableEnded) {
+        res.write(": heartbeat\n\n");
+      }
+    }, 30_000);
+
+    const cleanup = () => {
+      clearInterval(heartbeat);
+      removeSseClient(orderId, res);
+    };
+
+    req.on("close", cleanup);
+    res.on("error", cleanup);
+  },
+
   proceedPayment: async (req: Request, res: Response) => {
     try {
       const orderId = Number(req.body.order_id);
@@ -163,12 +221,16 @@ const endpoint = {
       const transactionStatus: string = notification.transaction_status;
       const transactionNumber: string = notification.order_id;
 
-      if (transactionStatus === "settlement") {
+      if (
+        transactionStatus === "settlement" ||
+        transactionStatus === "complete"
+      ) {
         // 1. Cari data transaksi + dapet ID dari relasi-relasinya
         const transactionData = await prisma.transaction.findFirst({
           where: { transaction_no: transactionNumber },
           select: {
             id: true,
+            order_id: true,
             transaction_no: true,
             orders: {
               select: {
@@ -217,6 +279,8 @@ const endpoint = {
             data: { status: "available" },
           }),
         ]);
+
+        broadcastPaymentComplete(transactionData.order_id);
       } else if (
         transactionStatus === "expire" ||
         transactionStatus === "cancel"

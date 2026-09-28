@@ -1,8 +1,9 @@
-import { ref } from "vue";
+import { onUnmounted, ref, watch } from "vue";
 import { useAlertDialog } from "../../../composables/useAlertDialog";
 import axios from "../../../helper/axios";
 
 const { alert, confirm } = useAlertDialog();
+const apiBaseUrl = import.meta.env.VITE_API_URL;
 
 const usePayment = (orderId: number) => {
   const paymentMethod = ref<string>("");
@@ -21,6 +22,47 @@ const usePayment = (orderId: number) => {
   const isLoadingQris = ref(false);
   const paymentStatus = ref<string>("pending");
   const turnOffUnit = ref<boolean>(false);
+  let paymentEventSource: EventSource | null = null;
+
+  const closePaymentEventSource = () => {
+    paymentEventSource?.close();
+    paymentEventSource = null;
+  };
+
+  const listenForPaymentComplete = () => {
+    closePaymentEventSource();
+
+    paymentEventSource = new EventSource(
+      `${apiBaseUrl}/transaction/payment/sse/${orderId}`,
+    );
+
+    paymentEventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data) as { status?: string };
+
+        if (data.status === "complete") {
+          paymentStatus.value = "complete";
+          showQrisModal.value = false;
+          paymentSelectionMode.value = false;
+          closePaymentEventSource();
+          alert({
+            title: "Pembayaran Berhasil",
+            message: "Pembayaran QRIS telah diterima.",
+            variant: "success",
+          });
+        }
+      } catch (error) {
+        console.error("Invalid payment SSE message", error);
+      }
+    };
+
+    paymentEventSource.onerror = () => {
+      // EventSource akan mencoba terhubung kembali secara otomatis.
+      if (paymentEventSource?.readyState === EventSource.CLOSED) {
+        console.error("Payment SSE connection closed");
+      }
+    };
+  };
 
   const handlePayment = async () => {
     if (paymentMethod.value == "") {
@@ -96,6 +138,16 @@ const usePayment = (orderId: number) => {
     }
   };
 
+  watch(showQrisModal, (isVisible) => {
+    if (isVisible && qrisUrl.value) {
+      listenForPaymentComplete();
+    } else if (!isVisible) {
+      closePaymentEventSource();
+    }
+  });
+
+  onUnmounted(closePaymentEventSource);
+
   return {
     paymentMethod,
     paymentLink,
@@ -107,6 +159,8 @@ const usePayment = (orderId: number) => {
     handlePayment,
     switchPaymentMode,
     turnOffUnit,
+    listenForPaymentComplete,
+    closePaymentEventSource,
   };
 };
 
