@@ -2,7 +2,7 @@
 import { ref, watch, onUnmounted } from "vue";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
-import { Trash } from "@lucide/vue";
+import { PowerIcon, Trash } from "@lucide/vue";
 import { useAlertDialog } from "../../../composables/useAlertDialog";
 import utc from "dayjs/plugin/utc";
 dayjs.extend(duration);
@@ -13,6 +13,7 @@ const props = defineProps<{
   playDuration: number;
   rawStartTime: dayjs.Dayjs;
   rawEndTime: dayjs.Dayjs;
+  paymentStatus: string;
 }>();
 
 const { confirm } = useAlertDialog();
@@ -151,7 +152,7 @@ onUnmounted(stopTicking);
       </div>
 
       <!-- Sisa waktu + progress bar -->
-      <div class="bg-gray-50 rounded-xl p-4">
+      <div v-if="paymentStatus == 'pending'" class="bg-gray-50 rounded-xl p-4">
         <div class="flex items-center justify-between mb-2">
           <span class="text-xs text-gray-500 flex items-center gap-1.5">
             <svg
@@ -211,16 +212,23 @@ onUnmounted(stopTicking);
           </svg>
           Tambah 1 Jam
         </button>
+        <div class="px-5 pb-5">
+          <button
+            @click="cancelRent"
+            class="flex gap-1 text-red-400 text-sm cursor-pointer hover:text-red-600"
+          >
+            <Trash :size="16" /> <span>Batalkan Sewa</span>
+          </button>
+        </div>
       </div>
-    </div>
-
-    <div class="px-5 pb-5">
-      <button
-        @click="cancelRent"
-        class="flex gap-1 text-red-400 text-sm cursor-pointer hover:text-red-600"
-      >
-        <Trash :size="16" /> <span>Batalkan Sewa</span>
-      </button>
+      <div v-else class="bg-gray-50 rounded-xl p-4">
+        <button
+          class="mt-5 flex-1 p-3 w-full flex items-center justify-center gap-1.5 h-10 rounded-xl bg-gray-400 text-white text-sm font-semibold hover:bg-indigo-700 active:scale-[0.97] transition-all cursor-pointer"
+        >
+          <PowerIcon :size="15" />
+          Matikan Unit
+        </button>
+      </div>
     </div>
   </div>
 </template>

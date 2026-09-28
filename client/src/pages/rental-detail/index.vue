@@ -14,6 +14,7 @@ import {
   RefreshCcw,
   SquareChevronRight,
   Trash,
+  Utensils,
   Wallet,
 } from "@lucide/vue";
 import formatRupiah from "../../helper/currency.ts";
@@ -92,6 +93,7 @@ const {
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- ============ CARD 1: Informasi Sesi ============ -->
         <SessionCard
+          :payment-status="paymentStatus"
           :customer-name="customerName"
           :raw-start-time="rawStartTime"
           :raw-end-time="rawEndTime"
@@ -106,19 +108,7 @@ const {
             <div
               class="px-5 py-4 border-b border-gray-100 flex items-center gap-2"
             >
-              <svg
-                class="w-4 h-4 text-indigo-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M3 3h18M3 9h18M3 15h18M3 21h18"
-                />
-              </svg>
+              <Utensils class="text-indigo-500" :size="20" />
               <h3 class="font-display font-semibold text-[15px] text-gray-900">
                 Makanan & Minuman
               </h3>
@@ -158,6 +148,7 @@ const {
 
                     <div class="flex items-center gap-1.5 shrink-0">
                       <button
+                        v-if="paymentStatus == 'pending'"
                         @click="decrementQty(item)"
                         class="w-6 h-6 flex items-center justify-center rounded-md bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 active:scale-95 transition-all cursor-pointer"
                       >
@@ -168,6 +159,7 @@ const {
                         >{{ item.qty }}</span
                       >
                       <button
+                        v-if="paymentStatus == 'pending'"
                         @click="incrementQty(item)"
                         class="w-6 h-6 flex items-center justify-center rounded-md bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 active:scale-95 transition-all cursor-pointer"
                       >
@@ -182,6 +174,7 @@ const {
                     </span>
 
                     <button
+                      v-if="paymentStatus == 'pending'"
                       @click="removeFnbItem(item.id)"
                       class="text-white p-2 bg-red-300 rounded-full hover:bg-red-400 transition-colors shrink-0 cursor-pointer"
                     >
@@ -192,6 +185,7 @@ const {
               </div>
 
               <button
+                v-if="paymentStatus == 'pending'"
                 @click="sidebarStatus = true"
                 class="w-full flex items-center justify-center gap-1.5 h-10 rounded-xl border border-dashed border-gray-300 text-gray-500 text-sm font-medium hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/40 active:bg-indigo-200 transition-all cursor-pointer"
               >

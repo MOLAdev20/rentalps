@@ -88,7 +88,8 @@ export const usePlaySession = (unitId: number) => {
         quantity: item.qty,
       }));
 
-      const endTime = dayjs().add(playDuration.value, "hour").utc().format();
+      // const endTime = dayjs().add(playDuration.value, "hour").utc().format();
+      const endTime = dayjs().add(1, "minute").utc().format();
 
       const payload = {
         customer_name: customerName.value,
