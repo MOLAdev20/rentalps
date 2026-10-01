@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 import BaseLayout from "../../components/__Layout.vue";
-import { History, PlayCircle } from "@lucide/vue";
+import { ArrowLeftCircle, History, PlayCircle } from "@lucide/vue";
 import AlertDialog from "../../components/AlertDialog.vue";
 import formatRupiah from "../../helper/currency.ts";
 import SessionCard from "./components/SessionCard.vue";

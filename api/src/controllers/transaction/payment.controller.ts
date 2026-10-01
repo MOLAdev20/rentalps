@@ -100,7 +100,6 @@ const endpoint = {
     try {
       const orderId = Number(req.body.order_id);
       const paymentMethod = req.body.payment_method;
-      const turnOffUnit = Number(req.body.turn_off_unit);
 
       const orders = await prisma.orders.update({
         where: {
@@ -109,7 +108,29 @@ const endpoint = {
         data: {
           status: "complete",
         },
+        include: {
+          rentedUnitOrder: true,
+        },
       });
+
+      // Matikan unit yang sudah habis masa sewanya (end_time < sekarang)
+      // dan ubah statusnya menjadi "available"
+      const expiredUnitIds = orders.rentedUnitOrder
+        .filter((item) => item.end_time < new Date())
+        .map((item) => item.unit_item_id);
+
+      if (expiredUnitIds.length > 0) {
+        await prisma.unitItem.updateMany({
+          where: {
+            id: {
+              in: expiredUnitIds,
+            },
+          },
+          data: {
+            status: "available",
+          },
+        });
+      }
 
       const transaction = await prisma.transaction.create({
         data: {
@@ -120,26 +141,6 @@ const endpoint = {
           amount: orders.total,
         },
       });
-
-      if (turnOffUnit === 1) {
-        await prisma.rentedUnitOrder.updateMany({
-          where: { order_id: orders.id },
-          data: { status: "finished" },
-        });
-
-        await prisma.unitItem.updateMany({
-          where: {
-            rentedUnitOrder: {
-              some: {
-                order_id: orders.id,
-              },
-            },
-          },
-          data: {
-            status: "available",
-          },
-        });
-      }
 
       res.json({
         message: "payment-success",
@@ -239,6 +240,7 @@ const endpoint = {
                   select: {
                     id: true,
                     unit_item_id: true, // ID unit PS fisiknya
+                    end_time: true,
                   },
                 },
               },
@@ -249,14 +251,8 @@ const endpoint = {
         if (!transactionData) {
           throw new Error(`Transaction ${notification.order_id} not found`);
         }
-        // Extract list ID unit yang disewa & ID PS fisiknya
-        const rentedUnitItemIds = transactionData.orders.rentedUnitOrder.map(
-          (item) => item.id,
-        );
-        const unitItemIds = transactionData.orders.rentedUnitOrder.map(
-          (item) => item.unit_item_id,
-        );
-        // 3. Eksekusi update 4 tabel sekaligus pake $transaction
+
+        // 3. Eksekusi update 2 tabel sekaligus
         await prisma.$transaction([
           // A. Update status transaksi ini
           prisma.transaction.update({
@@ -268,17 +264,20 @@ const endpoint = {
             where: { order_no: transactionData.orders.order_no },
             data: { status: "complete" },
           }),
-          // C. Update status item PS yang dipesan
-          prisma.rentedUnitOrder.updateMany({
-            where: { id: { in: rentedUnitItemIds } },
-            data: { status: "finished" },
-          }),
-          // D. Update status fisik unit PS-nya biar bisa disewa lagi
-          prisma.unitItem.updateMany({
+        ]);
+
+        // Matikan unit yang sudah habis masa sewanya (end_time < sekarang)
+        // dan ubah statusnya menjadi "available"
+        const unitItemIds = transactionData.orders.rentedUnitOrder
+          .filter((item) => item.end_time < new Date())
+          .map((item) => item.unit_item_id);
+
+        if (unitItemIds.length > 0) {
+          await prisma.unitItem.updateMany({
             where: { id: { in: unitItemIds } },
             data: { status: "available" },
-          }),
-        ]);
+          });
+        }
 
         broadcastPaymentComplete(transactionData.order_id);
       } else if (
@@ -299,10 +298,9 @@ const endpoint = {
         message: "notification-processed",
       });
     } catch (err) {
-      console.log(err);
-      res.status(500).json({
-        message: "error",
-        err,
+      console.log("Notification Error:", err);
+      return res.status(500).json({
+        message: "notification-error",
       });
     }
   },
