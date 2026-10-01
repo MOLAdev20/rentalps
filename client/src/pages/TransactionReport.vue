@@ -54,6 +54,7 @@ onMounted(() => {
   axios.get(
     "transaction",
     (response: any) => {
+      console.log(response.data);
       response.data.map((item: any) => {
         transactionData.value.push({
           id: item.id,
@@ -63,8 +64,8 @@ onMounted(() => {
           total: item.total,
           created_at: item.created_at,
           unit_ps: item.units[0].title,
-          payment_method: "cash",
-          status: "selesai",
+          payment_method: item.payment_method,
+          status: item.status,
           rent_price_per_hour: item.units[0].rent_price ?? 0,
           start_time: item.units[0].start_time ?? item.created_at,
           end_time: item.units[0].end_time ?? item.created_at,
@@ -300,7 +301,7 @@ async function hapusTransaksi(transaction: TransactionLogs) {
                   <span
                     class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
                     :class="
-                      transaction.status === 'Selesai'
+                      transaction.status === 'complete'
                         ? 'bg-emerald-50 text-emerald-600'
                         : 'bg-amber-50 text-amber-600'
                     "
@@ -308,12 +309,16 @@ async function hapusTransaksi(transaction: TransactionLogs) {
                     <span
                       class="h-1.5 w-1.5 rounded-full"
                       :class="
-                        transaction.status === 'Selesai'
+                        transaction.status === 'complete'
                           ? 'bg-emerald-500'
                           : 'bg-amber-500'
                       "
                     ></span>
-                    {{ transaction.status }}
+                    {{
+                      transaction.status === "complete"
+                        ? "Selesai"
+                        : "Menunggu Pembayaran"
+                    }}
                   </span>
                 </td>
 
@@ -451,7 +456,14 @@ async function hapusTransaksi(transaction: TransactionLogs) {
 
           <div class="flex-1 overflow-y-auto px-6 py-6 space-y-6">
             <!-- Hero: penyewa + total -->
-            <div class="rounded-2xl bg-indigo-500 p-5 text-white">
+            <div
+              class="rounded-2xl p-5"
+              :class="
+                selectedTransaction.status === 'complete'
+                  ? 'bg-indigo-500 text-white'
+                  : 'bg-amber-50 text-amber-500 border-amber-500 border'
+              "
+            >
               <div class="flex items-start justify-between">
                 <div>
                   <p class="text-xs text-indigo-100">Pelanggan</p>
@@ -462,7 +474,11 @@ async function hapusTransaksi(transaction: TransactionLogs) {
                 <span
                   class="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold"
                 >
-                  {{ selectedTransaction.status }}
+                  {{
+                    selectedTransaction.status === "complete"
+                      ? "Selesai"
+                      : "Menunggu Pembayaran"
+                  }}
                 </span>
               </div>
               <div class="mt-4 border-t border-white/20 pt-4">
