@@ -4,6 +4,7 @@ import { useFnbOrder } from "./useFnbOrder";
 import { usePayment } from "./usePayment";
 import { usePlaySessionOrder } from "./usePlaySessionOrder";
 import { useRouter } from "vue-router";
+import { useRentedHistorySidebar } from "../../../composables/useRentedHistorySidebar";
 
 const useOrderPage = (unitId: number, orderId: number) => {
   const router = useRouter();
@@ -12,6 +13,9 @@ const useOrderPage = (unitId: number, orderId: number) => {
   const payment = usePayment(orderId);
 
   const playSession = usePlaySessionOrder();
+
+  const { openRentHistorySidebar, rentedHistorySidebarStatus } =
+    useRentedHistorySidebar();
 
   onMounted(() => {
     axios.get(
@@ -65,12 +69,6 @@ const useOrderPage = (unitId: number, orderId: number) => {
       },
     );
   });
-
-  const rentedHistorySidebarStatus = ref<boolean>(false);
-
-  const openRentHistorySidebar = () => {
-    rentedHistorySidebarStatus.value = true;
-  };
 
   const grandTotal = computed(
     () => playSession.unitRentTotal.value + fnb.fnbTotal.value,

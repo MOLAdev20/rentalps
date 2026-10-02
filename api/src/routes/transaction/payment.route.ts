@@ -4,6 +4,7 @@ import authMiddleware from "../../middleware/authorization.middleware.js";
 
 const route = Router();
 
+route.get("/sse/:orderId", paymentController.sse);
 route.post("/notification", paymentController.notification);
 route.post(
   "/proceed-payment",

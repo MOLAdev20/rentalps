@@ -3,6 +3,30 @@ import { prisma } from "../../lib/prisma.js";
 import midtransClient from "midtrans-client";
 import env from "../../config/env.js";
 
+const sseClients = new Map<number, Set<Response>>();
+
+const removeSseClient = (orderId: number, res: Response) => {
+  const clients = sseClients.get(orderId);
+  if (!clients) return;
+
+  clients.delete(res);
+  if (clients.size === 0) {
+    sseClients.delete(orderId);
+  }
+};
+
+const broadcastPaymentComplete = (orderId: number) => {
+  const clients = sseClients.get(orderId);
+  if (!clients) return;
+
+  const message = `data: ${JSON.stringify({ status: "complete" })}\n\n`;
+  for (const client of clients) {
+    client.write(message);
+    client.end();
+    removeSseClient(orderId, client);
+  }
+};
+
 const snap = new midtransClient.Snap({
   isProduction: false,
   serverKey: env.MIDTRANS.SERVER_KEY,
@@ -38,11 +62,44 @@ const generateTransactionNo = async (): Promise<string> => {
 };
 
 const endpoint = {
+  sse: (req: Request, res: Response) => {
+    const orderId = Number(req.params.orderId);
+
+    if (!Number.isInteger(orderId) || orderId <= 0) {
+      return res.status(400).json({ message: "invalid-order-id" });
+    }
+
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    });
+    res.flushHeaders();
+    res.write(`retry: 5000\n\n`);
+
+    const clients = sseClients.get(orderId) ?? new Set<Response>();
+    clients.add(res);
+    sseClients.set(orderId, clients);
+
+    const heartbeat = setInterval(() => {
+      if (!res.writableEnded) {
+        res.write(": heartbeat\n\n");
+      }
+    }, 30_000);
+
+    const cleanup = () => {
+      clearInterval(heartbeat);
+      removeSseClient(orderId, res);
+    };
+
+    req.on("close", cleanup);
+    res.on("error", cleanup);
+  },
+
   proceedPayment: async (req: Request, res: Response) => {
     try {
       const orderId = Number(req.body.order_id);
       const paymentMethod = req.body.payment_method;
-      const turnOffUnit = Number(req.body.turn_off_unit);
 
       const orders = await prisma.orders.update({
         where: {
@@ -51,7 +108,29 @@ const endpoint = {
         data: {
           status: "complete",
         },
+        include: {
+          rentedUnitOrder: true,
+        },
       });
+
+      // Matikan unit yang sudah habis masa sewanya (end_time < sekarang)
+      // dan ubah statusnya menjadi "available"
+      const expiredUnitIds = orders.rentedUnitOrder
+        .filter((item) => item.end_time < new Date())
+        .map((item) => item.unit_item_id);
+
+      if (expiredUnitIds.length > 0) {
+        await prisma.unitItem.updateMany({
+          where: {
+            id: {
+              in: expiredUnitIds,
+            },
+          },
+          data: {
+            status: "available",
+          },
+        });
+      }
 
       const transaction = await prisma.transaction.create({
         data: {
@@ -62,26 +141,6 @@ const endpoint = {
           amount: orders.total,
         },
       });
-
-      if (turnOffUnit === 1) {
-        await prisma.rentedUnitOrder.updateMany({
-          where: { order_id: orders.id },
-          data: { status: "finished" },
-        });
-
-        await prisma.unitItem.updateMany({
-          where: {
-            rentedUnitOrder: {
-              some: {
-                order_id: orders.id,
-              },
-            },
-          },
-          data: {
-            status: "available",
-          },
-        });
-      }
 
       res.json({
         message: "payment-success",
@@ -163,12 +222,16 @@ const endpoint = {
       const transactionStatus: string = notification.transaction_status;
       const transactionNumber: string = notification.order_id;
 
-      if (transactionStatus === "settlement") {
+      if (
+        transactionStatus === "settlement" ||
+        transactionStatus === "complete"
+      ) {
         // 1. Cari data transaksi + dapet ID dari relasi-relasinya
         const transactionData = await prisma.transaction.findFirst({
           where: { transaction_no: transactionNumber },
           select: {
             id: true,
+            order_id: true,
             transaction_no: true,
             orders: {
               select: {
@@ -177,6 +240,7 @@ const endpoint = {
                   select: {
                     id: true,
                     unit_item_id: true, // ID unit PS fisiknya
+                    end_time: true,
                   },
                 },
               },
@@ -187,14 +251,8 @@ const endpoint = {
         if (!transactionData) {
           throw new Error(`Transaction ${notification.order_id} not found`);
         }
-        // Extract list ID unit yang disewa & ID PS fisiknya
-        const rentedUnitItemIds = transactionData.orders.rentedUnitOrder.map(
-          (item) => item.id,
-        );
-        const unitItemIds = transactionData.orders.rentedUnitOrder.map(
-          (item) => item.unit_item_id,
-        );
-        // 3. Eksekusi update 4 tabel sekaligus pake $transaction
+
+        // 3. Eksekusi update 2 tabel sekaligus
         await prisma.$transaction([
           // A. Update status transaksi ini
           prisma.transaction.update({
@@ -206,17 +264,22 @@ const endpoint = {
             where: { order_no: transactionData.orders.order_no },
             data: { status: "complete" },
           }),
-          // C. Update status item PS yang dipesan
-          prisma.rentedUnitOrder.updateMany({
-            where: { id: { in: rentedUnitItemIds } },
-            data: { status: "finished" },
-          }),
-          // D. Update status fisik unit PS-nya biar bisa disewa lagi
-          prisma.unitItem.updateMany({
+        ]);
+
+        // Matikan unit yang sudah habis masa sewanya (end_time < sekarang)
+        // dan ubah statusnya menjadi "available"
+        const unitItemIds = transactionData.orders.rentedUnitOrder
+          .filter((item) => item.end_time < new Date())
+          .map((item) => item.unit_item_id);
+
+        if (unitItemIds.length > 0) {
+          await prisma.unitItem.updateMany({
             where: { id: { in: unitItemIds } },
             data: { status: "available" },
-          }),
-        ]);
+          });
+        }
+
+        broadcastPaymentComplete(transactionData.order_id);
       } else if (
         transactionStatus === "expire" ||
         transactionStatus === "cancel"
@@ -235,10 +298,9 @@ const endpoint = {
         message: "notification-processed",
       });
     } catch (err) {
-      console.log(err);
-      res.status(500).json({
-        message: "error",
-        err,
+      console.log("Notification Error:", err);
+      return res.status(500).json({
+        message: "notification-error",
       });
     }
   },

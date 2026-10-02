@@ -12,6 +12,7 @@ const endpoint = {
           subtotal: true,
           total: true,
           created_at: true,
+          status: true,
           rentedUnitOrder: {
             select: {
               id: true,
@@ -42,6 +43,14 @@ const endpoint = {
               },
             },
           },
+          transaction: {
+            select: {
+              payment_method: true,
+            },
+            where: {
+              status: "complete",
+            },
+          },
         },
         orderBy: {
           created_at: "desc",
@@ -53,8 +62,8 @@ const endpoint = {
         id: trx.id,
         transaction_no: `TRX-${new Date(trx.created_at).toISOString().slice(0, 10).replace(/-/g, "")}-${String(trx.id).padStart(3, "0")}`,
         customer_name: trx.customer_name,
-        payment_method: "CASH",
-        status: "COMPLETED",
+        payment_method: trx.transaction[0]?.payment_method ?? "",
+        status: trx.status,
         subtotal: trx.subtotal,
         total: trx.total,
         created_at: trx.created_at,
