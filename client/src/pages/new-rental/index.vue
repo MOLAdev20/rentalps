@@ -8,16 +8,25 @@ import SessionCard from "./components/SessionCard.vue";
 import FnbCard from "./components/FnbCard.vue";
 import { useCreateOrder } from "./composables/useCreateOrder.ts";
 
-onMounted(async () => {
-  document.title = `Sewa Baru | Rent.Play!`;
-});
-
 const props = defineProps<{
   unitId: number;
 }>();
 
-const { unitTitle, fnbTotal, grandTotal, startPlay, totalRentPrice } =
-  useCreateOrder(props.unitId);
+const {
+  unitTitle,
+  fnbTotal,
+  grandTotal,
+  startPlay,
+  totalRentPrice,
+  rentedHistorySidebarStatus,
+  openRentHistorySidebar,
+  loadSession,
+} = useCreateOrder(props.unitId);
+
+onMounted(async () => {
+  document.title = `Sewa Baru | Rent.Play!`;
+  loadSession();
+});
 </script>
 <template>
   <BaseLayout>
