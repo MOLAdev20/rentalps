@@ -5,10 +5,16 @@ import { ref } from "vue";
 
 const useCreateOrder = (unitId: number) => {
   const { fnbTotal } = useFnb();
-  const { unitTitle, grandTotal, startPlay, totalRentPrice } =
+  const { unitTitle, grandTotal, startPlay, totalRentPrice, loadSession } =
     usePlaySession(unitId);
   const { rentedHistorySidebarStatus, openRentHistorySidebar } =
     useRentedHistorySidebar();
+
+  const rentedHistorySidebarStatus = ref(false);
+
+  const openRentHistorySidebar = () => {
+    rentedHistorySidebarStatus.value = !rentedHistorySidebarStatus.value;
+  };
 
   return {
     fnbTotal,
@@ -18,6 +24,7 @@ const useCreateOrder = (unitId: number) => {
     totalRentPrice,
     rentedHistorySidebarStatus,
     openRentHistorySidebar,
+    loadSession,
   };
 };
 

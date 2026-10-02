@@ -9,10 +9,6 @@ import FnbCard from "./components/FnbCard.vue";
 import { useCreateOrder } from "./composables/useCreateOrder.ts";
 import RentedHistorySidebar from "../../components/RentedHistorySidebar.vue";
 
-onMounted(async () => {
-  document.title = `Sewa Baru | Rent.Play!`;
-});
-
 const props = defineProps<{
   unitId: number;
 }>();
@@ -25,7 +21,13 @@ const {
   totalRentPrice,
   rentedHistorySidebarStatus,
   openRentHistorySidebar,
+  loadSession,
 } = useCreateOrder(props.unitId);
+
+onMounted(async () => {
+  document.title = `Sewa Baru | Rent.Play!`;
+  loadSession();
+});
 </script>
 <template>
   <BaseLayout>

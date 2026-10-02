@@ -1,9 +1,10 @@
-import { ref, computed, type ComputedRef, onMounted, onUnmounted } from "vue";
+import { ref, computed, type ComputedRef, onUnmounted } from "vue";
 import axios from "../../../helper/axios.ts";
 import { useRouter } from "vue-router";
 import { useAlertDialog } from "../../../composables/useAlertDialog.ts";
 import { useFnb } from "./useFnbDraft.ts";
 import dayjs from "dayjs";
+import "dayjs/locale/id";
 import utc from "dayjs/plugin/utc";
 
 const { fnbTotal, selectedFnBItems } = useFnb();
@@ -132,10 +133,6 @@ export const usePlaySession = (unitId: number) => {
 
   const grandTotal = computed(() => totalRentPrice.value + fnbTotal.value);
 
-  onMounted(() => {
-    loadSession();
-  });
-
   onUnmounted(() => {
     clearInterval(tick);
   });
@@ -153,5 +150,6 @@ export const usePlaySession = (unitId: number) => {
     startPlay,
     grandTotal,
     totalRentPrice,
+    loadSession,
   };
 };

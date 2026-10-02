@@ -169,9 +169,20 @@ const endpoint = {
   getHistoryByUnit: async (req: Request, res: Response) => {
     try {
       let unitId: number = Number(req.params.id);
+      let date: string = req.query.date as string; // Contoh: "2026-10-03"
+
+      // 1. Tentukan Awal Hari WIB (00:00:00 WIB = 17:00:00 UTC tanggal sebelumnya)
+      const startOfDay = new Date(`${date}T00:00:00+07:00`);
+
+      // 2. Tentukan Akhir Hari WIB (23:59:59.999 WIB = 16:59:59.999 UTC)
+      const endOfDay = new Date(`${date}T23:59:59.999+07:00`);
 
       const orderHistory = await prisma.orders.findMany({
         where: {
+          created_at: {
+            gte: startOfDay,
+            lte: endOfDay,
+          },
           rentedUnitOrder: {
             some: {
               unit_item_id: unitId,

@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import axios from "../helper/axios";
 import { CircleX, Search, Clock, Calendar } from "@lucide/vue";
 import formatRupiah from "../helper/currency";
 import { useRouter } from "vue-router";
+import dayjs from "dayjs";
+import "dayjs/locale/id";
 
 type RentalHistory = {
   id: string;
@@ -25,10 +27,11 @@ const props = defineProps<{
 }>();
 
 const rentalHistoryList = ref<RentalHistory[]>([]);
+const dateFilter = ref<string>(new Date().toLocaleDateString("en-CA"));
 
-onMounted(() => {
+const loadRentalHistory = () => {
   axios.get(
-    `transaction/unit-history/${props.unitId}`,
+    `transaction/unit-history/${props.unitId}?date=${dateFilter.value}`,
     (data: any) => {
       data.data.map((item: any) => {
         rentalHistoryList.value.push({
@@ -45,10 +48,19 @@ onMounted(() => {
       console.error("Error fetching rental history:", error);
     },
   );
+};
+
+onMounted(() => {
+  loadRentalHistory();
 });
 
-// Search Logic (Pencarian Berdasarkan Nama atau Tanggal/Status)
-const searchQuery = ref("");
+watch(dateFilter, () => {
+  rentalHistoryList.value = [];
+  searchQuery.value = "";
+  loadRentalHistory();
+});
+
+const searchQuery = ref<string>("");
 
 const filteredRentalHistory = computed(() => {
   if (!searchQuery.value.trim()) return rentalHistoryList.value;
@@ -62,8 +74,6 @@ const filteredRentalHistory = computed(() => {
     );
   });
 });
-
-onMounted(async () => {});
 
 const closeSidebar = () => {
   sidebarStatus.value = false;
@@ -127,7 +137,19 @@ const goToDetail = (orderId: any) => {
         </div>
 
         <!-- Search Input -->
-        <div class="px-5 py-3 border-b border-gray-100 shrink-0">
+        <div class="px-5 py-3 border-b flex gap-1 border-gray-100 shrink-0">
+          <div class="relative">
+            <Calendar
+              :size="20"
+              class="absolute top-1/2 left-3 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              v-model="dateFilter"
+              type="date"
+              placeholder="Cari nama penyewa / tanggal..."
+              class="w-full h-10 pl-9 pr-3 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition-all"
+            />
+          </div>
           <div class="relative">
             <Search
               :size="20"
@@ -165,7 +187,13 @@ const goToDetail = (orderId: any) => {
                       : 'bg-rose-50 text-rose-600 border border-rose-200/60',
                 ]"
               >
-                {{ item.paymentStatus }}
+                {{
+                  item.paymentStatus === "complete"
+                    ? "Selesai"
+                    : item.paymentStatus === "pending"
+                      ? "Menunggu Pembayaran"
+                      : "Gagal"
+                }}
               </span>
             </div>
 
@@ -173,11 +201,16 @@ const goToDetail = (orderId: any) => {
             <div class="space-y-1 text-xs text-gray-500">
               <div class="flex items-center gap-1.5">
                 <Clock :size="14" class="text-gray-400 shrink-0" />
-                <span>Waktu Main: {{ item.playTime }}</span>
+                <span>Waktu Main: {{ item.playTime }} Jam</span>
               </div>
               <div class="flex items-center gap-1.5">
                 <Calendar :size="14" class="text-gray-400 shrink-0" />
-                <span>Order: {{ item.createdAt }}</span>
+                <span
+                  >Tanggal Order:
+                  {{
+                    dayjs(item.createdAt).locale("id").format("DD MMMM YYYY")
+                  }}</span
+                >
               </div>
             </div>
 
