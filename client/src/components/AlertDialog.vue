@@ -59,7 +59,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKeydown));
       <div
         v-if="state.isOpen"
         @click="onBackdropClick"
-        class="fixed inset-0 z-[70] bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-4"
+        class="fixed inset-0 z-70 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-4"
       >
         <Transition
           enter-active-class="transition-all duration-400 ease-[cubic-bezier(0.34,1.8,0.64,1.8)]"
