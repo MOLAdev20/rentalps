@@ -180,7 +180,7 @@ const goToDetail = (orderId: any) => {
               <span
                 :class="[
                   'px-2 py-0.5 text-[11px] font-medium rounded-full shrink-0',
-                  item.paymentStatus === 'success'
+                  item.paymentStatus === 'complete'
                     ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/60'
                     : item.paymentStatus === 'pending'
                       ? 'bg-amber-50 text-amber-600 border border-amber-200/60'
@@ -192,7 +192,7 @@ const goToDetail = (orderId: any) => {
                     ? "Selesai"
                     : item.paymentStatus === "pending"
                       ? "Menunggu Pembayaran"
-                      : "Gagal"
+                      : "Dibatalkan"
                 }}
               </span>
             </div>

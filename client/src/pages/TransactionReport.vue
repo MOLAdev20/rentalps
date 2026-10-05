@@ -303,7 +303,9 @@ async function hapusTransaksi(transaction: TransactionLogs) {
                     :class="
                       transaction.status === 'complete'
                         ? 'bg-emerald-50 text-emerald-600'
-                        : 'bg-amber-50 text-amber-600'
+                        : transaction.status === 'pending'
+                          ? 'bg-amber-50 text-amber-600'
+                          : 'bg-rose-50 text-rose-600'
                     "
                   >
                     <span
@@ -311,13 +313,17 @@ async function hapusTransaksi(transaction: TransactionLogs) {
                       :class="
                         transaction.status === 'complete'
                           ? 'bg-emerald-500'
-                          : 'bg-amber-500'
+                          : transaction.status === 'pending'
+                            ? 'bg-amber-500'
+                            : 'bg-rose-500'
                       "
                     ></span>
                     {{
                       transaction.status === "complete"
                         ? "Selesai"
-                        : "Menunggu Pembayaran"
+                        : transaction.status === "pending"
+                          ? "Menunggu Pembayaran"
+                          : "Dibatalkan"
                     }}
                   </span>
                 </td>

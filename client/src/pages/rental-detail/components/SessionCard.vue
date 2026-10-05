@@ -2,8 +2,7 @@
 import { ref, watch, onUnmounted } from "vue";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
-import { Minus, Plus, PowerIcon, Trash } from "@lucide/vue";
-import { useAlertDialog } from "../../../composables/useAlertDialog";
+import { Ban, Minus, Plus, PowerIcon } from "@lucide/vue";
 import utc from "dayjs/plugin/utc";
 dayjs.extend(duration);
 dayjs.extend(utc);
@@ -19,9 +18,9 @@ const props = defineProps<{
 defineEmits<{
   (event: "add-play-time"): void;
   (event: "reduce-play-time"): void;
+  (event: "cancel-order"): void;
 }>();
 
-const { confirm } = useAlertDialog();
 const playDate = ref<string>();
 const playTime = ref<string>();
 const remainingTime = ref<string>();
@@ -66,16 +65,6 @@ const formatRemainingTimeToPercentage = (
   const clampedPercentage = Math.min(Math.max(percentage, 0), 100);
 
   return Number(clampedPercentage.toFixed(2));
-};
-
-const cancelRent = async () => {
-  await confirm({
-    title: "Batalkan Sewa?",
-    message: "Unit akan dibatalkan status sewanya",
-    variant: "warning",
-    confirmText: "Oke, Lanjut",
-    cancelText: "Batal",
-  });
 };
 
 const formatTime = (date: dayjs.Dayjs | string, format: string) =>
@@ -217,14 +206,14 @@ onUnmounted(stopTicking);
             Tambah 1 Jam
           </button>
         </div>
-        <div class="px-5 pb-5">
-          <button
-            @click="cancelRent"
-            class="flex gap-1 text-red-400 text-sm cursor-pointer hover:text-red-600"
-          >
-            <Trash :size="16" /> <span>Batalkan Sewa</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          @click="$emit('cancel-order')"
+          class="mt-3 w-full p-3 flex items-center justify-center gap-1.5 h-10 rounded-xl bg-white border border-rose-500 text-rose-500 text-sm font-semibold hover:bg-rose-50 active:scale-[0.97] transition-all cursor-pointer"
+        >
+          <Ban :size="15" />
+          Batalkan Sewa
+        </button>
       </div>
       <div v-else class="bg-gray-50 rounded-xl p-4">
         <button

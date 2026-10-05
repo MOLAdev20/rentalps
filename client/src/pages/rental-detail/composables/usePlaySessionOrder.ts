@@ -2,9 +2,11 @@ import { ref, computed } from "vue";
 import dayjs from "dayjs";
 import axios from "../../../helper/axios";
 import { useAlertDialog } from "../../../composables/useAlertDialog";
+import { useRouter } from "vue-router";
 
 const usePlaySessionOrder = (unitId: number, orderId: number) => {
   const { alert, confirm } = useAlertDialog();
+  const router = useRouter();
 
   const customerName = ref<string>("");
   const rentedUnit = ref<string>("");
@@ -16,6 +18,7 @@ const usePlaySessionOrder = (unitId: number, orderId: number) => {
   // Guard lokal biar tombol gak nge-trigger request dobel
   let isAddingPlayTime = false;
   let isReducingPlayTime = false;
+  let isCancellingOrder = false;
 
   const unitRentTotal = computed(
     () => rentPricePerHour.value * playDuration.value,
@@ -132,6 +135,55 @@ const usePlaySessionOrder = (unitId: number, orderId: number) => {
     );
   };
 
+  /**
+   * Minta konfirmasi ke pegawai, lalu batalkan order sewa.
+   * Backend akan mengubah status order ke `cancel` dan status unit ke `available`.
+   * Setelah berhasil, pengguna diarahkan kembali ke halaman daftar sewa.
+   */
+  const cancelOrder = async () => {
+    if (isCancellingOrder) return;
+
+    const isConfirmed = await confirm({
+      title: "Batalkan Sewa?",
+      message:
+        "Order akan dibatalkan dan unit akan kembali tersedia. Tindakan ini tidak bisa diurungkan.",
+      variant: "warning",
+      confirmText: "Ya, Batalkan Sewa",
+      cancelText: "Tidak",
+    });
+
+    if (!isConfirmed) return;
+
+    isCancellingOrder = true;
+
+    axios.patchWithData(
+      "order/cancel",
+      { order_id: orderId },
+      () => {
+        isCancellingOrder = false;
+        router.replace({ name: "rent" });
+      },
+      (err: any) => {
+        isCancellingOrder = false;
+
+        if (err?.response?.data?.message === "order-already-completed") {
+          alert({
+            title: "Tidak Bisa Dibatalkan",
+            message: "Order ini sudah selesai atau sudah dibatalkan sebelumnya.",
+            variant: "warning",
+          });
+          return;
+        }
+
+        alert({
+          title: "Gagal Membatalkan Sewa",
+          message: "Terjadi kesalahan. Silakan coba lagi.",
+          variant: "danger",
+        });
+      },
+    );
+  };
+
   return {
     customerName,
     rentedUnit,
@@ -142,7 +194,9 @@ const usePlaySessionOrder = (unitId: number, orderId: number) => {
     unitRentTotal,
     addPlayTime,
     reducePlayTime,
+    cancelOrder,
   };
 };
 
 export { usePlaySessionOrder };
+

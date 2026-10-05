@@ -7,5 +7,7 @@ route.get("/by-unit/:unit_id", orderController.getByRentedUnit);
 route.post("/", orderController.createOrder);
 route.post("/add-play-time", orderController.addPlayTime);
 route.post("/reduce-play-time", orderController.reducePlayTime);
+route.patch("/cancel", orderController.cancelOrder);
 
 export default route;
+
