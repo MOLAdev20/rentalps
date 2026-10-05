@@ -1,4 +1,4 @@
-import { ref, onMounted, computed } from "vue";
+import { onMounted, computed } from "vue";
 import axios from "../../../helper/axios";
 import { useFnbOrder } from "./useFnbOrder";
 import { usePayment } from "./usePayment";
@@ -12,7 +12,7 @@ const useOrderPage = (unitId: number, orderId: number) => {
   const fnb = useFnbOrder(orderId);
   const payment = usePayment(orderId);
 
-  const playSession = usePlaySessionOrder();
+  const playSession = usePlaySessionOrder(unitId, orderId);
 
   const { openRentHistorySidebar, rentedHistorySidebarStatus } =
     useRentedHistorySidebar();

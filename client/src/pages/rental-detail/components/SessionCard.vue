@@ -2,7 +2,7 @@
 import { ref, watch, onUnmounted } from "vue";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
-import { PowerIcon, Trash } from "@lucide/vue";
+import { Minus, Plus, PowerIcon, Trash } from "@lucide/vue";
 import { useAlertDialog } from "../../../composables/useAlertDialog";
 import utc from "dayjs/plugin/utc";
 dayjs.extend(duration);
@@ -14,6 +14,11 @@ const props = defineProps<{
   rawStartTime: dayjs.Dayjs;
   rawEndTime: dayjs.Dayjs;
   paymentStatus: string;
+}>();
+
+defineEmits<{
+  (event: "add-play-time"): void;
+  (event: "reduce-play-time"): void;
 }>();
 
 const { confirm } = useAlertDialog();
@@ -194,24 +199,24 @@ onUnmounted(stopTicking);
         <div class="text-xs font-semibold text-gray-500 mt-2">
           <span>{{ remainingTimePercentage }}%</span>
         </div>
-        <button
-          class="mt-5 flex-1 p-3 w-full flex items-center justify-center gap-1.5 h-10 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 active:scale-[0.97] transition-all cursor-pointer"
-        >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
+        <div class="mt-5 flex gap-2">
+          <button
+            type="button"
+            @click="$emit('reduce-play-time')"
+            class="flex-1 p-3 flex items-center justify-center gap-1.5 h-10 rounded-xl bg-white border border-indigo-600 text-indigo-600 text-sm font-semibold hover:bg-indigo-50 active:scale-[0.97] transition-all cursor-pointer"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
-          Tambah 1 Jam
-        </button>
+            <Minus :size="15" />
+            Kurangi 1 Jam
+          </button>
+          <button
+            type="button"
+            @click="$emit('add-play-time')"
+            class="flex-1 p-3 flex items-center justify-center gap-1.5 h-10 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 active:scale-[0.97] transition-all cursor-pointer"
+          >
+            <Plus :size="15" />
+            Tambah 1 Jam
+          </button>
+        </div>
         <div class="px-5 pb-5">
           <button
             @click="cancelRent"
