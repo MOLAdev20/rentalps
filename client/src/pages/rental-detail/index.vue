@@ -55,6 +55,7 @@ const {
   grandTotal,
   addPlayTime,
   reducePlayTime,
+  cancelOrder,
 } = useOrderPage(Number(props.id), Number(route.query.order));
 </script>
 
@@ -102,6 +103,7 @@ const {
           :play-duration="playDuration"
           @add-play-time="addPlayTime"
           @reduce-play-time="reducePlayTime"
+          @cancel-order="cancelOrder"
         />
         <!-- ============ CARD 2: FnB & Tagihan ============ -->
         <div class="relative">

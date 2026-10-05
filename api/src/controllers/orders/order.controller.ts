@@ -313,6 +313,59 @@ const endpoint = {
     }
   },
 
+  cancelOrder: async (req: Request, res: Response) => {
+    try {
+      const orderId = Number(req.body.order_id);
+
+      if (!Number.isInteger(orderId) || orderId <= 0) {
+        return res.status(400).json({
+          message: "bad-request",
+          detail: "order_id is required and must be a positive integer",
+        });
+      }
+
+      // Cari order beserta unit-unit yang disewa di dalamnya
+      const order = await prisma.orders.findFirst({
+        where: { id: orderId },
+        include: {
+          rentedUnitOrder: {
+            select: { unit_item_id: true },
+          },
+        },
+      });
+
+      if (!order) {
+        return res.status(404).json({ message: "not-found" });
+      }
+
+      // Hanya order yang masih pending yang bisa dibatalkan
+      if (order.status !== "pending") {
+        return res.status(409).json({ message: "order-already-completed" });
+      }
+
+      const unitItemIds = order.rentedUnitOrder.map((r) => r.unit_item_id);
+
+      // Batalkan order dan kembalikan status unit ke available secara atomik
+      await prisma.$transaction([
+        prisma.orders.update({
+          where: { id: orderId },
+          data: { status: "cancel" },
+        }),
+        prisma.unitItem.updateMany({
+          where: { id: { in: unitItemIds } },
+          data: { status: "available" },
+        }),
+      ]);
+
+      return res.json({ message: "order-cancelled" });
+    } catch (err: any) {
+      res.status(500).json({
+        message: "internal-server-error",
+        detail: err.message,
+      });
+    }
+  },
+
   addPlayTime: async (req: Request, res: Response) => {
     try {
       const orderId = Number(req.body.order_id);

@@ -140,6 +140,20 @@ export default {
     }
   },
 
+  patchWithData: async (
+    url: string,
+    data: any,
+    callback: any,
+    errCallback?: any,
+  ) => {
+    try {
+      const response = await Axios.patch(`${base_url}/${url}`, data);
+      callback(response);
+    } catch (err: any) {
+      errCallback(err);
+    }
+  },
+
   logout: async () => {
     try {
       await Axios.post(`${base_url}/auth/logout`);
