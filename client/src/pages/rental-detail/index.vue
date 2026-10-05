@@ -53,6 +53,8 @@ const {
   openRentHistorySidebar,
   rentedHistorySidebarStatus,
   grandTotal,
+  addPlayTime,
+  reducePlayTime,
 } = useOrderPage(Number(props.id), Number(route.query.order));
 </script>
 
@@ -98,6 +100,8 @@ const {
           :raw-start-time="rawStartTime"
           :raw-end-time="rawEndTime"
           :play-duration="playDuration"
+          @add-play-time="addPlayTime"
+          @reduce-play-time="reducePlayTime"
         />
         <!-- ============ CARD 2: FnB & Tagihan ============ -->
         <div class="relative">
