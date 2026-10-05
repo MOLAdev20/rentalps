@@ -224,6 +224,174 @@ const endpoint = {
       });
     }
   },
+
+  reducePlayTime: async (req: Request, res: Response) => {
+    try {
+      const orderId = Number(req.body.order_id);
+      const unitItemId = Number(req.body.unit_item_id);
+
+      if (
+        !Number.isInteger(orderId) ||
+        orderId <= 0 ||
+        !Number.isInteger(unitItemId) ||
+        unitItemId <= 0
+      ) {
+        return res.status(400).json({
+          message: "bad-request",
+          detail: "order_id and unit_item_id are required numbers",
+        });
+      }
+
+      // Cari baris sewa unit yang mau dikurangi durasinya
+      const rentedUnitOrder = await prisma.rentedUnitOrder.findFirst({
+        where: { order_id: orderId, unit_item_id: unitItemId },
+        include: { unitItem: true, orders: true },
+      });
+
+      if (!rentedUnitOrder) {
+        return res.status(404).json({
+          message: "rented-unit-order-not-found",
+        });
+      }
+
+      // Durasi hanya bisa dikurangi selama order belum dibayar
+      if (rentedUnitOrder.orders.status !== "pending") {
+        return res.status(409).json({
+          message: "order-already-completed",
+        });
+      }
+
+      const REDUCED_PLAY_TIME = 1; // dalam jam
+      const REDUCED_DURATION_MS = REDUCED_PLAY_TIME * 60 * 60 * 1000;
+
+      // Minimal durasi sewa 1 jam, gak boleh dikurangi lagi
+      if (rentedUnitOrder.play_time <= REDUCED_PLAY_TIME) {
+        return res.status(400).json({
+          message: "minimum-play-time-reached",
+        });
+      }
+
+      const reducedPrice =
+        rentedUnitOrder.unitItem.rent_price * REDUCED_PLAY_TIME;
+
+      // Perpendek end_time 1 jam, tapi jangan sampai mendahului start_time
+      const earliestEndTime = new Date(rentedUnitOrder.start_time).getTime();
+      const newEndTime = new Date(
+        Math.max(
+          new Date(rentedUnitOrder.end_time).getTime() - REDUCED_DURATION_MS,
+          earliestEndTime,
+        ),
+      );
+
+      const [updatedRentedUnitOrder] = await prisma.$transaction([
+        prisma.rentedUnitOrder.update({
+          where: { id: rentedUnitOrder.id },
+          data: {
+            play_time: { decrement: REDUCED_PLAY_TIME },
+            end_time: newEndTime,
+            sub_total: { decrement: reducedPrice },
+          },
+        }),
+        prisma.orders.update({
+          where: { id: orderId },
+          data: {
+            subtotal: { decrement: reducedPrice },
+            total: { decrement: reducedPrice },
+          },
+        }),
+      ]);
+
+      res.json({
+        message: "play-time-reduced",
+        data: updatedRentedUnitOrder,
+      });
+    } catch (err: any) {
+      res.status(500).json({
+        message: "internal-server-error",
+        detail: err.message,
+      });
+    }
+  },
+
+  addPlayTime: async (req: Request, res: Response) => {
+    try {
+      const orderId = Number(req.body.order_id);
+      const unitItemId = Number(req.body.unit_item_id);
+
+      if (
+        !Number.isInteger(orderId) ||
+        orderId <= 0 ||
+        !Number.isInteger(unitItemId) ||
+        unitItemId <= 0
+      ) {
+        return res.status(400).json({
+          message: "bad-request",
+          detail: "order_id and unit_item_id are required numbers",
+        });
+      }
+
+      // Cari baris sewa unit yang mau ditambah durasinya
+      const rentedUnitOrder = await prisma.rentedUnitOrder.findFirst({
+        where: { order_id: orderId, unit_item_id: unitItemId },
+        include: { unitItem: true, orders: true },
+      });
+
+      if (!rentedUnitOrder) {
+        return res.status(404).json({
+          message: "rented-unit-order-not-found",
+        });
+      }
+
+      // Durasi hanya bisa ditambah selama order belum dibayar
+      if (rentedUnitOrder.orders.status !== "pending") {
+        return res.status(409).json({
+          message: "order-already-completed",
+        });
+      }
+
+      const ADDED_PLAY_TIME = 1; // dalam jam
+      const ADDED_DURATION_MS = ADDED_PLAY_TIME * 60 * 60 * 1000;
+      const addedPrice = rentedUnitOrder.unitItem.rent_price * ADDED_PLAY_TIME;
+
+      // Perpanjang dari end_time lama. Kalau waktu mainnya sudah lewat,
+      // hitung tambahan mulai dari sekarang biar jam barunya tetap valid.
+      const baseEndTime = Math.max(
+        new Date(rentedUnitOrder.end_time).getTime(),
+        Date.now(),
+      );
+      const newEndTime = new Date(baseEndTime + ADDED_DURATION_MS);
+
+      const [updatedRentedUnitOrder] = await prisma.$transaction([
+        prisma.rentedUnitOrder.update({
+          where: { id: rentedUnitOrder.id },
+          data: {
+            play_time: { increment: ADDED_PLAY_TIME },
+            end_time: newEndTime,
+            sub_total: { increment: addedPrice },
+          },
+        }),
+        prisma.orders.update({
+          where: { id: orderId },
+          data: {
+            subtotal: { increment: addedPrice },
+            total: { increment: addedPrice },
+          },
+        }),
+      ]);
+
+      console.log(updatedRentedUnitOrder);
+
+      res.json({
+        message: "play-time-added",
+        data: updatedRentedUnitOrder,
+      });
+    } catch (err: any) {
+      res.status(500).json({
+        message: "internal-server-error",
+        detail: err.message,
+      });
+    }
+  },
 };
 
 export default endpoint;
