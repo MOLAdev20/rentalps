@@ -25,7 +25,7 @@ import {
   Box,
 } from "@lucide/vue";
 
-document.title = "Dasbor | Rent.Play!";
+document.title = "Dashboard | Rent.Play!";
 
 // ================= Types =================
 interface UnitItem {

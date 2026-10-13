@@ -1,30 +1,12 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { ArrowLeft } from "@lucide/vue";
+</script>
 <template>
   <body class="min-h-screen flex items-center justify-center px-6 py-16">
     <div class="w-full max-w-md">
       <div
         class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden fade-up fade-up-1"
       >
-        <!-- Status bar ala header aplikasi -->
-        <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-          <svg
-            class="w-4 h-4 text-indigo-600"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M12 9v3.75m0-10.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
-            />
-          </svg>
-          <h3 class="font-display font-semibold text-[15px] text-gray-900">
-            Status Halaman
-          </h3>
-        </div>
-
         <!-- Ilustrasi: joystick "kosong sinyal" -->
         <div class="pt-10 pb-6 flex justify-center fade-up fade-up-2">
           <svg
@@ -72,13 +54,13 @@
           <h1
             class="font-display text-lg font-bold text-gray-900 mt-3 fade-up fade-up-3"
           >
-            Sesi Halaman Terputus
+            Halaman Tidak Ditemukan
           </h1>
           <p
             class="text-sm text-gray-500 mt-2 leading-relaxed fade-up fade-up-3"
           >
-            Halaman yang kamu cari nggak ketemu di sistem. Mungkin link-nya
-            salah, unit-nya udah dipindah, atau halamannya emang belum tersedia.
+            Halaman yang kamu cari tidak ada. Mungkin linknya salah atau
+            halamannya memang belum tersedia.
           </p>
 
           <div class="mt-7 flex items-center gap-3 fade-up fade-up-4">
@@ -103,30 +85,14 @@
             </a>
             <button
               onclick="window.history.back()"
-              class="flex-1 flex items-center justify-center gap-1.5 h-10 rounded-xl bg-white border border-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-50 active:scale-[0.97] transition-all"
+              class="flex-1 flex items-center justify-center gap-1.5 h-10 rounded-xl bg-white border border-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-50 active:scale-[0.97] transition-all cursor-pointer"
             >
-              <svg
-                class="w-4 h-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
+              <ArrowLeft :size="15" />
               Halaman Sebelumnya
             </button>
           </div>
         </div>
       </div>
-
-      <p class="text-center text-xs text-gray-400 mt-5 fade-up fade-up-4">
-        PS Rental POS &middot; Kode error 404
-      </p>
     </div>
   </body>
 </template>
