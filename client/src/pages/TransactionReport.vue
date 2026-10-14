@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed } from "vue";
+import { onMounted, onUnmounted, ref, computed, watch } from "vue";
 import toast, { Toaster } from "vue3-hot-toast";
 import axios from "../helper/axios.ts";
 import BaseLayout from "../components/__Layout.vue";
@@ -16,6 +16,11 @@ import {
   UtensilsCrossed,
   Play,
   Info,
+  ChevronDown,
+  Check,
+  CircleCheck,
+  CircleX,
+  Receipt,
 } from "@lucide/vue";
 import dayjs from "dayjs";
 import { useAlertDialog } from "../composables/useAlertDialog";
@@ -52,6 +57,52 @@ const transactionData = ref<TransactionLogs[]>([]);
 const loadingRef = ref<HTMLElement | null>(null);
 const isEmpty = ref<boolean>(false);
 const page = ref<number>(1);
+const isFetching = ref<boolean>(false);
+
+// ================= Filter Tanggal =================
+const isFilterOpen = ref(false);
+const filterType = ref<
+  "today" | "7days" | "this_month" | "last_month" | "custom"
+>("this_month");
+const startDate = ref(dayjs().startOf("month").format("YYYY-MM-DD"));
+const endDate = ref(dayjs().endOf("month").format("YYYY-MM-DD"));
+
+const selectedPeriodLabel = computed(() => {
+  if (filterType.value === "today") return "Hari Ini";
+  if (filterType.value === "7days") return "7 Hari Terakhir";
+  if (filterType.value === "this_month") return "Bulan Ini";
+  if (filterType.value === "last_month") return "Bulan Lalu";
+  return "Kustom Tanggal";
+});
+
+const formattedDateRange = computed(() => {
+  return `${dayjs(startDate.value).format("DD MMM YYYY")} - ${dayjs(endDate.value).format("DD MMM YYYY")}`;
+});
+
+// ================= Ringkasan Score Card =================
+const summary = ref({
+  all: { count: 0, amount: 0 },
+  complete: { count: 0, amount: 0 },
+  cancel: { count: 0, amount: 0 },
+  pending: { count: 0, amount: 0 },
+});
+
+// ================= Filter Status (klik Score Card) =================
+const statusFilter = ref<"all" | "complete" | "cancel" | "pending">("all");
+
+const statusLabel = computed(() => {
+  if (statusFilter.value === "complete") return "Berhasil";
+  if (statusFilter.value === "cancel") return "Gagal";
+  if (statusFilter.value === "pending") return "Menunggu Pembayaran";
+  return "Semua Status";
+});
+
+const selectStatus = (status: "all" | "complete" | "cancel" | "pending") => {
+  // Klik ulang score card yang sedang aktif = lepas filter
+  statusFilter.value =
+    statusFilter.value === status && status !== "all" ? "all" : status;
+  resetAndFetch();
+};
 
 const observer = new IntersectionObserver(
   (entries) => {
@@ -59,6 +110,8 @@ const observer = new IntersectionObserver(
       console.log(page.value);
       // Load more data here
       fetchTransactionData();
+    } else {
+      console.log("habis");
     }
   },
   {
@@ -76,22 +129,38 @@ onMounted(() => {
   }
 
   window.addEventListener("click", handleClickOutside);
+  window.addEventListener("click", closeFilterOnOutside);
   window.addEventListener("scroll", closeMenu, true);
   window.addEventListener("resize", closeMenu);
 });
 
 const fetchTransactionData = () => {
-  axios.get(
-    `transaction?page=${page.value}`,
-    (response: any) => {
-      console.log(response.data);
+  if (isFetching.value || isEmpty.value) return;
+  isFetching.value = true;
 
-      if (response.data.length === 0) {
+  axios.getWithParams(
+    "transaction",
+    {
+      page: page.value,
+      start_date: startDate.value,
+      end_date: endDate.value,
+      status: statusFilter.value === "all" ? undefined : statusFilter.value,
+    },
+    (response: any) => {
+      const payload = response.data;
+      const rows = payload.data ?? [];
+
+      if (payload.summary) {
+        summary.value = payload.summary;
+      }
+
+      if (rows.length === 0) {
         isEmpty.value = true;
+        isFetching.value = false;
         return;
       }
 
-      response.data.map((item: any) => {
+      rows.forEach((item: any) => {
         transactionData.value.push({
           id: item.id,
           transaction_no: item.transaction_no,
@@ -114,13 +183,69 @@ const fetchTransactionData = () => {
           })),
         });
       });
+
       page.value += 1;
-      isEmpty.value == true;
+      isFetching.value = false;
     },
     () => {
+      isFetching.value = false;
       toast.error("Data gagal dimuat. Harap coba lagi");
     },
   );
+};
+
+// Reset daftar & riwayat halaman lalu muat ulang saat filter berubah
+const resetAndFetch = () => {
+  transactionData.value = [];
+  page.value = 1;
+  isEmpty.value = false;
+  isFetching.value = false;
+  fetchTransactionData();
+};
+
+watch(loadingRef, (newEl: HTMLElement | null, oldEl: HTMLElement | null) => {
+  if (oldEl) {
+    observer.unobserve(oldEl);
+  }
+
+  if (newEl) {
+    observer.observe(newEl);
+  }
+});
+
+const selectPreset = (
+  type: "today" | "7days" | "this_month" | "last_month",
+) => {
+  filterType.value = type;
+  if (type === "today") {
+    startDate.value = dayjs().format("YYYY-MM-DD");
+    endDate.value = dayjs().format("YYYY-MM-DD");
+  } else if (type === "7days") {
+    startDate.value = dayjs().subtract(6, "day").format("YYYY-MM-DD");
+    endDate.value = dayjs().format("YYYY-MM-DD");
+  } else if (type === "this_month") {
+    startDate.value = dayjs().startOf("month").format("YYYY-MM-DD");
+    endDate.value = dayjs().endOf("month").format("YYYY-MM-DD");
+  } else if (type === "last_month") {
+    const lastMonth = dayjs().subtract(1, "month");
+    startDate.value = lastMonth.startOf("month").format("YYYY-MM-DD");
+    endDate.value = lastMonth.endOf("month").format("YYYY-MM-DD");
+  }
+  isFilterOpen.value = false;
+  resetAndFetch();
+};
+
+const applyCustomDate = () => {
+  filterType.value = "custom";
+  isFilterOpen.value = false;
+  resetAndFetch();
+};
+
+const closeFilterOnOutside = (e: MouseEvent) => {
+  const target = e.target as HTMLElement;
+  if (!target.closest(".filter-dropdown-container")) {
+    isFilterOpen.value = false;
+  }
 };
 
 const currencyFormat = (value: number) =>
@@ -198,6 +323,7 @@ function handleClickOutside(event: MouseEvent) {
 
 onUnmounted(() => {
   window.removeEventListener("click", handleClickOutside);
+  window.removeEventListener("click", closeFilterOnOutside);
   window.removeEventListener("scroll", closeMenu, true);
   window.removeEventListener("resize", closeMenu);
 });
@@ -257,6 +383,165 @@ async function hapusTransaksi(transaction: TransactionLogs) {
         </button>
       </div>
 
+      <!-- ============ Score Cards Ringkasan Transaksi (klik untuk filter status) ============ -->
+      <p class="mb-3 flex items-center gap-1.5 text-xs text-slate-400">
+        <Info :size="13" /> Klik kartu untuk memfilter transaksi berdasarkan
+        status
+      </p>
+      <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <button
+          type="button"
+          @click="selectStatus('all')"
+          :aria-pressed="statusFilter === 'all'"
+          title="Tampilkan semua status"
+          class="group relative overflow-hidden rounded-2xl border bg-white p-5 text-left shadow-sm transition-all duration-200 cursor-pointer hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+          :class="
+            statusFilter === 'all'
+              ? 'border-indigo-500 ring-2 ring-indigo-500/60 focus-visible:ring-indigo-500'
+              : 'border-slate-200 hover:border-indigo-300'
+          "
+        >
+          <div
+            class="absolute -right-2.5 -top-2.5 rounded-full bg-indigo-50 p-4 transition-colors group-hover:bg-indigo-100"
+          >
+            <Receipt class="text-indigo-200" :size="40" />
+          </div>
+          <div class="flex items-center gap-1.5">
+            <p
+              class="text-xs font-semibold uppercase tracking-wide text-slate-500"
+            >
+              Total Seluruh Transaksi
+            </p>
+            <span
+              v-if="statusFilter === 'all'"
+              class="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-indigo-600 text-white"
+            >
+              <Check :size="11" :stroke-width="3" />
+            </span>
+          </div>
+          <p class="mt-2 font-display text-2xl font-bold text-slate-900">
+            {{ currencyFormat(summary.all.amount) }}
+          </p>
+          <p class="mt-1 text-xs text-slate-400">
+            {{ summary.all.count }} transaksi
+          </p>
+        </button>
+
+        <button
+          type="button"
+          @click="selectStatus('complete')"
+          :aria-pressed="statusFilter === 'complete'"
+          title="Tampilkan transaksi berhasil"
+          class="group relative overflow-hidden rounded-2xl border bg-white p-5 text-left shadow-sm transition-all duration-200 cursor-pointer hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+          :class="
+            statusFilter === 'complete'
+              ? 'border-emerald-500 ring-2 ring-emerald-500/60 focus-visible:ring-emerald-500'
+              : 'border-slate-200 hover:border-emerald-300'
+          "
+        >
+          <div
+            class="absolute -right-2.5 -top-2.5 rounded-full bg-emerald-50 p-4 transition-colors group-hover:bg-emerald-100"
+          >
+            <CircleCheck class="text-emerald-200" :size="40" />
+          </div>
+          <div class="flex items-center gap-1.5">
+            <p
+              class="text-xs font-semibold uppercase tracking-wide text-slate-500"
+            >
+              Transaksi Berhasil
+            </p>
+            <span
+              v-if="statusFilter === 'complete'"
+              class="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-emerald-600 text-white"
+            >
+              <Check :size="11" :stroke-width="3" />
+            </span>
+          </div>
+          <p class="mt-2 font-display text-2xl font-bold text-slate-900">
+            {{ currencyFormat(summary.complete.amount) }}
+          </p>
+          <p class="mt-1 text-xs text-slate-400">
+            {{ summary.complete.count }} transaksi
+          </p>
+        </button>
+
+        <button
+          type="button"
+          @click="selectStatus('cancel')"
+          :aria-pressed="statusFilter === 'cancel'"
+          title="Tampilkan transaksi gagal"
+          class="group relative overflow-hidden rounded-2xl border bg-white p-5 text-left shadow-sm transition-all duration-200 cursor-pointer hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+          :class="
+            statusFilter === 'cancel'
+              ? 'border-rose-500 ring-2 ring-rose-500/60 focus-visible:ring-rose-500'
+              : 'border-slate-200 hover:border-rose-300'
+          "
+        >
+          <div
+            class="absolute -right-2.5 -top-2.5 rounded-full bg-rose-50 p-4 transition-colors group-hover:bg-rose-100"
+          >
+            <CircleX class="text-rose-200" :size="40" />
+          </div>
+          <div class="flex items-center gap-1.5">
+            <p
+              class="text-xs font-semibold uppercase tracking-wide text-slate-500"
+            >
+              Transaksi Gagal
+            </p>
+            <span
+              v-if="statusFilter === 'cancel'"
+              class="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-rose-600 text-white"
+            >
+              <Check :size="11" :stroke-width="3" />
+            </span>
+          </div>
+          <p class="mt-2 font-display text-2xl font-bold text-slate-900">
+            {{ currencyFormat(summary.cancel.amount) }}
+          </p>
+          <p class="mt-1 text-xs text-slate-400">
+            {{ summary.cancel.count }} transaksi
+          </p>
+        </button>
+
+        <button
+          type="button"
+          @click="selectStatus('pending')"
+          :aria-pressed="statusFilter === 'pending'"
+          title="Tampilkan transaksi menunggu pembayaran"
+          class="group relative overflow-hidden rounded-2xl border bg-white p-5 text-left shadow-sm transition-all duration-200 cursor-pointer hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+          :class="
+            statusFilter === 'pending'
+              ? 'border-amber-500 ring-2 ring-amber-500/60 focus-visible:ring-amber-500'
+              : 'border-slate-200 hover:border-amber-300'
+          "
+        >
+          <div
+            class="absolute -right-2.5 -top-2.5 rounded-full bg-amber-50 p-4 transition-colors group-hover:bg-amber-100"
+          >
+            <Clock class="text-amber-200" :size="40" />
+          </div>
+          <div class="flex items-center gap-1.5">
+            <p
+              class="text-xs font-semibold uppercase tracking-wide text-slate-500"
+            >
+              Menunggu Pembayaran
+            </p>
+            <span
+              v-if="statusFilter === 'pending'"
+              class="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-amber-500 text-white"
+            >
+              <Check :size="11" :stroke-width="3" />
+            </span>
+          </div>
+          <p class="mt-2 font-display text-2xl font-bold text-slate-900">
+            {{ currencyFormat(summary.pending.amount) }}
+          </p>
+          <p class="mt-1 text-xs text-slate-400">
+            {{ summary.pending.count }} transaksi
+          </p>
+        </button>
+      </div>
+
       <section
         id="unit-table-data"
         class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
@@ -272,10 +557,148 @@ async function hapusTransaksi(transaction: TransactionLogs) {
               Data transaksi yang terjadi
             </p>
           </div>
-          <div
-            class="rounded-full bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500"
-          >
-            {{ transactionData.length }} unit
+          <div class="flex items-center gap-3">
+            <button
+              v-if="statusFilter !== 'all'"
+              type="button"
+              @click="selectStatus('all')"
+              title="Hapus filter status"
+              class="flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-100 cursor-pointer"
+            >
+              {{ statusLabel }}
+              <X :size="12" />
+            </button>
+            <div
+              class="rounded-full bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500"
+            >
+              {{ transactionData.length }} transaksi
+            </div>
+
+            <!-- ================= ELEGANT DROPDOWN FILTER ================= -->
+            <div class="relative filter-dropdown-container">
+              <button
+                @click="isFilterOpen = !isFilterOpen"
+                class="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-xs font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98] cursor-pointer"
+              >
+                <Calendar :size="15" class="text-indigo-600" />
+                <span>{{ selectedPeriodLabel }}</span>
+                <span class="text-slate-400 font-normal"
+                  >({{ formattedDateRange }})</span
+                >
+                <ChevronDown :size="14" class="text-slate-400" />
+              </button>
+
+              <!-- Dropdown Menu / Popover -->
+              <Transition
+                enter-active-class="transition-all duration-150 ease-out"
+                enter-from-class="opacity-0 scale-95 -translate-y-1"
+                enter-to-class="opacity-100 scale-100 translate-y-0"
+                leave-active-class="transition-all duration-100 ease-in"
+                leave-from-class="opacity-100 scale-100 translate-y-0"
+                leave-to-class="opacity-0 scale-95 -translate-y-1"
+              >
+                <div
+                  v-if="isFilterOpen"
+                  class="absolute right-0 z-30 mt-2 w-80 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl"
+                >
+                  <p
+                    class="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400"
+                  >
+                    Pilih Periode
+                  </p>
+
+                  <!-- Preset List -->
+                  <div class="space-y-0.5">
+                    <button
+                      @click="selectPreset('today')"
+                      class="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                    >
+                      <span>Hari Ini</span>
+                      <Check
+                        v-if="filterType === 'today'"
+                        :size="14"
+                        class="text-indigo-600"
+                      />
+                    </button>
+
+                    <button
+                      @click="selectPreset('7days')"
+                      class="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                    >
+                      <span>7 Hari Terakhir</span>
+                      <Check
+                        v-if="filterType === '7days'"
+                        :size="14"
+                        class="text-indigo-600"
+                      />
+                    </button>
+
+                    <button
+                      @click="selectPreset('this_month')"
+                      class="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                    >
+                      <span>Bulan Ini</span>
+                      <Check
+                        v-if="filterType === 'this_month'"
+                        :size="14"
+                        class="text-indigo-600"
+                      />
+                    </button>
+
+                    <button
+                      @click="selectPreset('last_month')"
+                      class="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                    >
+                      <span>Bulan Lalu</span>
+                      <Check
+                        v-if="filterType === 'last_month'"
+                        :size="14"
+                        class="text-indigo-600"
+                      />
+                    </button>
+                  </div>
+
+                  <div class="my-2 border-t border-slate-100"></div>
+
+                  <!-- Custom Range Section -->
+                  <p
+                    class="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400"
+                  >
+                    Rentang Kustom
+                  </p>
+                  <div class="space-y-2 px-1">
+                    <div class="grid grid-cols-2 gap-2">
+                      <div>
+                        <label class="block text-[10px] text-slate-400 mb-0.5"
+                          >Dari</label
+                        >
+                        <input
+                          type="date"
+                          v-model="startDate"
+                          class="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-700 focus:border-indigo-500 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label class="block text-[10px] text-slate-400 mb-0.5"
+                          >Sampai</label
+                        >
+                        <input
+                          type="date"
+                          v-model="endDate"
+                          class="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-700 focus:border-indigo-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      @click="applyCustomDate"
+                      class="w-full rounded-lg bg-indigo-600 py-2 text-xs font-semibold text-white transition-all hover:bg-indigo-700 active:scale-[0.98] cursor-pointer"
+                    >
+                      Terapkan Rentang
+                    </button>
+                  </div>
+                </div>
+              </Transition>
+            </div>
           </div>
         </div>
 
