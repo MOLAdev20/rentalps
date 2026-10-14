@@ -2,8 +2,12 @@ import type { Request, Response } from "express";
 import { prisma } from "../../lib/prisma.js";
 
 const endpoint = {
-  getAll: async (_: Request, res: Response) => {
+  getAll: async (req: Request, res: Response) => {
     try {
+      const page = parseInt(req.query.page as string) || 1;
+      const take = 10;
+      const skip = (page - 1) * take;
+
       const orders = await prisma.orders.findMany({
         // Filter status/date bisa dimasukin di sini nantinya
         select: {
@@ -52,6 +56,8 @@ const endpoint = {
             },
           },
         },
+        take,
+        skip,
         orderBy: {
           created_at: "desc",
         },
