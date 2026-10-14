@@ -224,6 +224,9 @@ Alur status:
 | `POST`   | `/fnb`                                              | –    | `fnb.create` (Zod)                  |
 | `GET`    | `/order/by-unit/:unit_id`                           | ✔    | `order.getByRentedUnit`             |
 | `POST`   | `/order`                                            | ✔    | `order.createOrder`                 |
+| `POST`   | `/order/add-play-time`                              | ✔    | `order.addPlayTime`                 |
+| `POST`   | `/order/reduce-play-time`                           | ✔    | `order.reducePlayTime`              |
+| `PATCH`  | `/order/cancel`                                     | ✔    | `order.cancelOrder`                 |
 | `POST`   | `/order/fnb-item/add`                               | ✔    | `orderedFnB.addToOrder`             |
 | `PATCH`  | `/order/fnb-item/change-qty/:id/:changeType`        | ✔    | `orderedFnB.changeQty`              |
 | `DELETE` | `/order/fnb-item/:id`                               | ✔    | `orderedFnB.removeFromTransaction`  |
@@ -252,6 +255,10 @@ Alur status:
 - Keranjang FnB draft (new-rental) vs live ke DB (rental-detail).
 - Pembayaran cash & QRIS (Midtrans Snap sandbox) + SSE notifikasi.
 - Laporan transaksi (tabel + sidebar detail) & laporan keuangan (filter tanggal + chart).
+- **Batalkan Sewa** — `PATCH /order/cancel`: mengubah status order ke `cancel` dan
+  membebaskan semua unit terkait ke `available` secara atomik. Tombol full-width
+  di `SessionCard.vue`, logika di `usePlaySessionOrder.cancelOrder`, redirect ke
+  halaman daftar sewa setelah berhasil.
 
 **Belum selesai / TODO di kode**
 
@@ -260,7 +267,8 @@ Alur status:
 - Halaman **TransactionReport**: `Cetak Struk` dan `Hapus Transaksi` masih TODO
   (perubahan hanya di state client, belum ada endpoint).
 - Halaman **FinancialStatements**: tombol `Export Excel` masih stub.
-- Detail sesi: tombol `Batalkan Sewa` belum terhubung API. (`Tambah 1 Jam` dan `Kurangi 1 Jam` sudah aktif via `POST /order/add-play-time` dan `POST /order/reduce-play-time`; pengurangan dibatasi minimal 1 jam.)
+- Detail sesi: `Tambah 1 Jam` dan `Kurangi 1 Jam` aktif via `POST /order/add-play-time`
+  dan `POST /order/reduce-play-time`; pengurangan dibatasi minimal 1 jam.
 - Tidak ada guard route FE — halaman bisa dibuka tanpa token, baru ditendang
   saat request pertama kena 401.
 - Tidak ada test otomatis.
@@ -285,7 +293,9 @@ Alur status:
    - Sukses: `res.json({ message: "<kode-kebab-case>", data? })`.
    - Kode pesan yang sudah dipakai: `success`, `unit-created`, `transaction-created`,
      `qris-generated`, `payment-success`, `payment-error`, `invalid-credentials`,
-     `unauthorized`, `not-found`, `internal-server-error`, `data-not-found`.
+     `unauthorized`, `not-found`, `internal-server-error`, `data-not-found`,
+     `play-time-added`, `play-time-reduced`, `order-cancelled`, `order-already-completed`,
+     `minimum-play-time-reached`, `rented-unit-order-not-found`.
    - Error: `res.status(500).json({ message: "...", err })`. Untuk validasi Zod,
      middleware mengembalikan `{ status: 'fail', errors: [{ field, message }] }`
      dengan `400`.
@@ -317,6 +327,8 @@ Alur status:
    axios.get("unit", (response) => { ... }, (err) => { ... });
    axios.getWithParams("...", params, onSuccess, onError);
    axios.post("order", payload, onSuccess, onError);
+   axios.patch("order/...", onSuccess, onError);           // PATCH tanpa body
+   axios.patchWithData("order/cancel", data, onSuccess, onError); // PATCH dengan body
    ```
    Helper ini otomatis menempelkan header Authorization & menangani refresh 401.
    **Jangan** pakai `Axios` langsung untuk endpoint internal (kecuali Login yang

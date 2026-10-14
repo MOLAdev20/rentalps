@@ -9,6 +9,7 @@ import TransactionReport from "../pages/TransactionReport.vue";
 import FinancialStatements from "../pages/FinancialStatements.vue";
 import Login from "../pages/Login.vue";
 import Fnb from "../pages/FnB.vue";
+import Pagination from "../pages/Pagination.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -78,6 +79,11 @@ const router = createRouter({
       path: "/fnb",
       name: "fnb",
       component: Fnb,
+    },
+    {
+      path: "/pagination",
+      name: "pagination",
+      component: Pagination,
     },
     // --- Wajib ditaro di paling bawah ---
     {

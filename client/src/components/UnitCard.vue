@@ -3,6 +3,7 @@ import { onUnmounted, ref, watch } from "vue";
 import {
   AlertCircle,
   ArrowRightCircle,
+  CircleDollarSignIcon,
   PauseCircle,
   PlayCircle,
 } from "@lucide/vue";
@@ -168,10 +169,12 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div v-else>
-          <p class="mt-2 font-semibold tracking-tight text-slate-900">
+        <div v-else class="flex gap-1 items-center mt-2">
+          <CircleDollarSignIcon class="text-green-600" :size="18" />
+          <p class="font-semibold tracking-tight text-slate-900">
             {{ pricePerHour }}
           </p>
+          <span class="text-sm text-gray-500">/ jam</span>
         </div>
 
         <div class="mt-4 flex gap-2">

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import formatRupiah from "../../../helper/currency";
-import { MinusCircleIcon, PlusCircleIcon, User } from "@lucide/vue";
+import { Clock, MinusCircleIcon, PlusCircleIcon, User } from "@lucide/vue";
 import { usePlaySession } from "../composables/usePlaySessionDraft";
 
 const props = defineProps<{
@@ -56,20 +56,7 @@ const {
       <div class="bg-gray-50 rounded-xl p-4">
         <div class="flex items-center justify-between mb-3">
           <span class="text-xs text-gray-500 flex items-center gap-1.5">
-            <svg
-              class="w-3.5 h-3.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <circle cx="12" cy="12" r="9" />
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M12 7v5l3 3"
-              />
-            </svg>
+            <Clock :size="14" class="text-gray-400" />
             Durasi Sewa
           </span>
           <span class="text-[11px] font-medium text-gray-400"

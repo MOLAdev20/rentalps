@@ -8,13 +8,13 @@ import "dayjs/locale/id";
 import utc from "dayjs/plugin/utc";
 
 const { fnbTotal, selectedFnBItems } = useFnb();
-
+const currentTime = ref<string>(dayjs().format("HH:mm:ss"));
 const customerName = ref<string>();
+const playDuration = ref<number>(1);
+const unitTitle = ref<string>();
+const unitRentPrice = ref<number>(0);
+
 export const usePlaySession = (unitId: number) => {
-  const currentTime = ref<string>(dayjs().format("HH:mm:ss"));
-  const playDuration = ref<number>(1);
-  const unitTitle = ref<string>();
-  const unitRentPrice = ref<number>(0);
   const todaysFormattedDate = ref<string>(
     dayjs().locale("id").format("DD MMMM YYYY"),
   );

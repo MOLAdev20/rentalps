@@ -15,6 +15,7 @@ import {
   Gamepad2,
   UtensilsCrossed,
   Play,
+  Info,
 } from "@lucide/vue";
 import dayjs from "dayjs";
 import { useAlertDialog } from "../composables/useAlertDialog";
@@ -48,13 +49,48 @@ interface TransactionLogs {
 
 const transactionData = ref<TransactionLogs[]>([]);
 
+const loadingRef = ref<HTMLElement | null>(null);
+const isEmpty = ref<boolean>(false);
+const page = ref<number>(1);
+
+const observer = new IntersectionObserver(
+  (entries) => {
+    if (entries[0].isIntersecting && !isEmpty.value) {
+      console.log(page.value);
+      // Load more data here
+      fetchTransactionData();
+    }
+  },
+  {
+    root: null,
+    rootMargin: "0px",
+    threshold: 0.1,
+  },
+);
+
 onMounted(() => {
   document.title = "Laporan Transaksi | Rent.Play!";
 
+  if (loadingRef.value && !isEmpty.value) {
+    observer.observe(loadingRef.value);
+  }
+
+  window.addEventListener("click", handleClickOutside);
+  window.addEventListener("scroll", closeMenu, true);
+  window.addEventListener("resize", closeMenu);
+});
+
+const fetchTransactionData = () => {
   axios.get(
-    "transaction",
+    `transaction?page=${page.value}`,
     (response: any) => {
       console.log(response.data);
+
+      if (response.data.length === 0) {
+        isEmpty.value = true;
+        return;
+      }
+
       response.data.map((item: any) => {
         transactionData.value.push({
           id: item.id,
@@ -78,12 +114,14 @@ onMounted(() => {
           })),
         });
       });
+      page.value += 1;
+      isEmpty.value == true;
     },
     () => {
       toast.error("Data gagal dimuat. Harap coba lagi");
     },
   );
-});
+};
 
 const currencyFormat = (value: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -158,11 +196,6 @@ function handleClickOutside(event: MouseEvent) {
   }
 }
 
-onMounted(() => {
-  window.addEventListener("click", handleClickOutside);
-  window.addEventListener("scroll", closeMenu, true);
-  window.addEventListener("resize", closeMenu);
-});
 onUnmounted(() => {
   window.removeEventListener("click", handleClickOutside);
   window.removeEventListener("scroll", closeMenu, true);
@@ -233,10 +266,10 @@ async function hapusTransaksi(transaction: TransactionLogs) {
         >
           <div>
             <h2 class="font-display text-[15px] font-semibold text-slate-900">
-              Daftar Unit
+              Data Transaksi
             </h2>
             <p class="mt-0.5 text-xs text-slate-500">
-              Data unit PS, harga sewa per jam, status, dan riwayat pembaruan
+              Data transaksi yang terjadi
             </p>
           </div>
           <div
@@ -369,6 +402,18 @@ async function hapusTransaksi(transaction: TransactionLogs) {
               </tr>
             </tbody>
           </table>
+          <div v-if="!isEmpty" class="flex justify-center py-4">
+            <div
+              ref="loadingRef"
+              class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"
+            ></div>
+          </div>
+          <div
+            v-else="isEmpty"
+            class="text-sm text-slate-500 p-4 flex items-center gap-1"
+          >
+            <Info :size="15" /> Data sudah ditampilkan seluruhnya
+          </div>
         </div>
       </section>
     </div>

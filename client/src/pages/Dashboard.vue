@@ -25,7 +25,7 @@ import {
   Box,
 } from "@lucide/vue";
 
-document.title = "Dasbor | Rent.Play!";
+document.title = "Dashboard | Rent.Play!";
 
 // ================= Types =================
 interface UnitItem {
@@ -372,7 +372,7 @@ onUnmounted(() => {
           <h1
             class="font-display text-2xl font-bold tracking-tight text-gray-900"
           >
-            Dasbor Operasional
+            Dashboard
           </h1>
           <p class="mt-1 text-sm text-gray-500">
             Ringkasan aktivitas rental PS & penjualan F&B hari ini secara
