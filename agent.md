@@ -199,7 +199,8 @@ Alur status:
      `POST /transaction/payment/notification` menandai complete/expired/cancel
      dan mem-broadcast event SSE.
 6. **Laporan**
-   - `GET /transaction` → daftar order + unit/FnB (mapping `TRX-YYYYMMDD-NNN`).
+   - `GET /transaction?page&start_date&end_date&status` → daftar order + unit/FnB
+     (mapping `TRX-YYYYMMDD-NNN`), plus `summary` agregat per status. Lihat §8.
    - `GET /transaction/unit-history/:unit_id?date=YYYY-MM-DD` → riwayat per unit
      (filter hari WIB `+07:00`).
    - `GET /transaction/report/financial-statements?start_date&end_date` → query
@@ -230,7 +231,7 @@ Alur status:
 | `POST`   | `/order/fnb-item/add`                               | ✔    | `orderedFnB.addToOrder`             |
 | `PATCH`  | `/order/fnb-item/change-qty/:id/:changeType`        | ✔    | `orderedFnB.changeQty`              |
 | `DELETE` | `/order/fnb-item/:id`                               | ✔    | `orderedFnB.removeFromTransaction`  |
-| `GET`    | `/transaction`                                      | ✔    | `transaction.getAll`                |
+| `GET`    | `/transaction?page&start_date&end_date&status`      | ✔    | `transaction.getAll`                |
 | `GET`    | `/transaction/unit/:id`                             | ✔    | `transaction.getDetail`             |
 | `GET`    | `/transaction/unit-history/:id`                     | ✔    | `transaction.getHistoryByUnit`      |
 | `GET`    | `/transaction/payment/sse/:orderId`                 | –    | `payment.sse`                       |
@@ -241,6 +242,17 @@ Alur status:
 
 > `/fnb` sengaja belum dipasang `authMiddleware`. Kalau menambah proteksi,
 > update juga halaman FnB & komponen `FnbItemSidebar` agar tetap berfungsi.
+>
+> `GET /transaction` (query param opsional, semua filter di `created_at` WIB `+07:00`):
+>
+> - `page` (default 1, 10 baris/`take`) — pagination buat infinite scroll tabel.
+> - `start_date` & `end_date` (`YYYY-MM-DD`) — rentang hari, pakai `gte/lte`.
+> - `status` (`pending|complete|cancel`) — filter daftar; nilai lain diabaikan.
+>
+> Respons berbentuk **`{ data, summary }`** (bukan array polos lagi).
+> `summary` = agregat `groupBy(['status'])` berisi `all`/`complete`/`cancel`/`pending`,
+> masing-masing `{ count, amount }`. `summary` **selalu full rentang tanggal**
+> (tidak terpengaruh `status`) supaya semua score card tetap punya angka.
 
 ---
 
@@ -255,6 +267,14 @@ Alur status:
 - Keranjang FnB draft (new-rental) vs live ke DB (rental-detail).
 - Pembayaran cash & QRIS (Midtrans Snap sandbox) + SSE notifikasi.
 - Laporan transaksi (tabel + sidebar detail) & laporan keuangan (filter tanggal + chart).
+- **TransactionReport**: filter tanggal dropdown (preset Hari Ini / 7 Hari / Bulan Ini /
+  Bulan Lalu / kustom, sama persis dengan `FinancialStatements.vue`) diletakkan di
+  header tabel di samping tulisan "Data Transaksi". Di atas tabel ada **4 score card
+  klik-untuk-filter status** (Total Seluruh / Berhasil `complete` / Gagal `cancel` /
+  Menunggu `pending`) yang menampilkan akumulasi uang + jumlah transaksi. Kartu aktif
+  ditandai ring + badge centang; klik ulang melepas filter; `Total Seluruh Transaksi` =
+  reset; ada chip status aktif + tombol hapus di header tabel. Filter tanggal & status
+  dikirim sekaligus ke `GET /transaction`.
 - **Batalkan Sewa** — `PATCH /order/cancel`: mengubah status order ke `cancel` dan
   membebaskan semua unit terkait ke `available` secara atomik. Tombol full-width
   di `SessionCard.vue`, logika di `usePlaySessionOrder.cancelOrder`, redirect ke

@@ -5,11 +5,33 @@ const endpoint = {
   getAll: async (req: Request, res: Response) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
+      const start_date = req.query.start_date as string | undefined; // 2026-08-01
+      const end_date = req.query.end_date as string | undefined; // 2026-08-31
+      const status = req.query.status as string | undefined; // complete | cancel | pending
       const take = 10;
       const skip = (page - 1) * take;
 
+      // Filter tanggal pakai rentang hari WIB (+07:00), konsisten dengan laporan lain
+      const where: any = {};
+      if (start_date || end_date) {
+        where.created_at = {};
+        if (start_date) {
+          where.created_at.gte = new Date(`${start_date}T00:00:00+07:00`);
+        }
+        if (end_date) {
+          where.created_at.lte = new Date(`${end_date}T23:59:59.999+07:00`);
+        }
+      }
+
+      // Filter status buat daftar transaksi (score card). Ringkasan tetap full
+      // rentang tanggal supaya semua score card tetap punya angka.
+      const dataWhere: any = { ...where };
+      if (status && ["pending", "complete", "cancel"].includes(status)) {
+        dataWhere.status = status;
+      }
+
       const orders = await prisma.orders.findMany({
-        // Filter status/date bisa dimasukin di sini nantinya
+        where: dataWhere,
         select: {
           id: true,
           customer_name: true,
@@ -64,6 +86,36 @@ const endpoint = {
       });
 
       // Mapping/Transformasi ringan biar nama key relasinya lebih bersih di JSON
+      // Ringkasan per status buat score card (jumlah transaksi + akumulasi uang)
+      const statusGroups = await prisma.orders.groupBy({
+        by: ["status"],
+        where,
+        _count: { _all: true },
+        _sum: { total: true },
+      });
+
+      const summary = {
+        all: { count: 0, amount: 0 },
+        complete: { count: 0, amount: 0 },
+        cancel: { count: 0, amount: 0 },
+        pending: { count: 0, amount: 0 },
+      };
+
+      statusGroups.forEach((group) => {
+        const count = group._count._all;
+        const amount = group._sum.total ?? 0;
+
+        summary.all.count += count;
+        summary.all.amount += amount;
+
+        if (group.status in summary) {
+          const key = group.status as keyof typeof summary;
+          summary[key].count += count;
+          summary[key].amount += amount;
+        }
+      });
+
+      // Mapping/Transformasi ringan biar nama key relasinya lebih bersih di JSON
       const responseData = orders.map((trx) => ({
         id: trx.id,
         transaction_no: `TRX-${new Date(trx.created_at).toISOString().slice(0, 10).replace(/-/g, "")}-${String(trx.id).padStart(3, "0")}`,
@@ -95,7 +147,10 @@ const endpoint = {
         })),
       }));
 
-      res.json(responseData);
+      res.json({
+        data: responseData,
+        summary,
+      });
     } catch (err) {
       res.status(500).json({
         err,
