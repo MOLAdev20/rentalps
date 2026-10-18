@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed, watch } from "vue";
-import toast, { Toaster } from "vue3-hot-toast";
-import axios from "../helper/axios.ts";
-import BaseLayout from "../components/__Layout.vue";
+import BaseLayout from "../../components/__Layout.vue";
 import {
   EllipsisVertical,
   Printer,
@@ -22,345 +19,42 @@ import {
   CircleX,
   Receipt,
 } from "@lucide/vue";
-import dayjs from "dayjs";
-import { useAlertDialog } from "../composables/useAlertDialog";
+import formatRupiah from "../../helper/currency.ts";
+import useTransactionPage from "./composables/useTransactionPage.ts";
+import { Toaster } from "vue3-hot-toast";
 
-const { confirm } = useAlertDialog();
-
-interface FnbOrderItem {
-  id: number;
-  title: string;
-  price: number;
-  qty: number;
-  subTotal: number;
-}
-
-interface TransactionLogs {
-  id: number;
-  transaction_no: string;
-  customer_name: string;
-  playDuration: string;
-  total: number;
-  created_at: string;
-  unit_ps: string;
-  payment_method: string;
-  status: string;
-  // ==== field tambahan buat kebutuhan sidebar detail ====
-  rent_price_per_hour: number;
-  start_time: string;
-  end_time: string;
-  fnb_items: FnbOrderItem[];
-}
-
-const transactionData = ref<TransactionLogs[]>([]);
-
-const loadingRef = ref<HTMLElement | null>(null);
-const isEmpty = ref<boolean>(false);
-const page = ref<number>(1);
-const isFetching = ref<boolean>(false);
-
-// ================= Filter Tanggal =================
-const isFilterOpen = ref(false);
-const filterType = ref<
-  "today" | "7days" | "this_month" | "last_month" | "custom"
->("this_month");
-const startDate = ref(dayjs().startOf("month").format("YYYY-MM-DD"));
-const endDate = ref(dayjs().endOf("month").format("YYYY-MM-DD"));
-
-const selectedPeriodLabel = computed(() => {
-  if (filterType.value === "today") return "Hari Ini";
-  if (filterType.value === "7days") return "7 Hari Terakhir";
-  if (filterType.value === "this_month") return "Bulan Ini";
-  if (filterType.value === "last_month") return "Bulan Lalu";
-  return "Kustom Tanggal";
-});
-
-const formattedDateRange = computed(() => {
-  return `${dayjs(startDate.value).format("DD MMM YYYY")} - ${dayjs(endDate.value).format("DD MMM YYYY")}`;
-});
-
-// ================= Ringkasan Score Card =================
-const summary = ref({
-  all: { count: 0, amount: 0 },
-  complete: { count: 0, amount: 0 },
-  cancel: { count: 0, amount: 0 },
-  pending: { count: 0, amount: 0 },
-});
-
-// ================= Filter Status (klik Score Card) =================
-const statusFilter = ref<"all" | "complete" | "cancel" | "pending">("all");
-
-const statusLabel = computed(() => {
-  if (statusFilter.value === "complete") return "Berhasil";
-  if (statusFilter.value === "cancel") return "Gagal";
-  if (statusFilter.value === "pending") return "Menunggu Pembayaran";
-  return "Semua Status";
-});
-
-const selectStatus = (status: "all" | "complete" | "cancel" | "pending") => {
-  // Klik ulang score card yang sedang aktif = lepas filter
-  statusFilter.value =
-    statusFilter.value === status && status !== "all" ? "all" : status;
-  resetAndFetch();
-};
-
-const observer = new IntersectionObserver(
-  (entries) => {
-    if (entries[0].isIntersecting && !isEmpty.value) {
-      console.log(page.value);
-      // Load more data here
-      fetchTransactionData();
-    } else {
-      console.log("habis");
-    }
-  },
-  {
-    root: null,
-    rootMargin: "0px",
-    threshold: 0.1,
-  },
-);
-
-onMounted(() => {
-  document.title = "Laporan Transaksi | Rent.Play!";
-
-  if (loadingRef.value && !isEmpty.value) {
-    observer.observe(loadingRef.value);
-  }
-
-  window.addEventListener("click", handleClickOutside);
-  window.addEventListener("click", closeFilterOnOutside);
-  window.addEventListener("scroll", closeMenu, true);
-  window.addEventListener("resize", closeMenu);
-});
-
-const fetchTransactionData = () => {
-  if (isFetching.value || isEmpty.value) return;
-  isFetching.value = true;
-
-  axios.getWithParams(
-    "transaction",
-    {
-      page: page.value,
-      start_date: startDate.value,
-      end_date: endDate.value,
-      status: statusFilter.value === "all" ? undefined : statusFilter.value,
-    },
-    (response: any) => {
-      const payload = response.data;
-      const rows = payload.data ?? [];
-
-      if (payload.summary) {
-        summary.value = payload.summary;
-      }
-
-      if (rows.length === 0) {
-        isEmpty.value = true;
-        isFetching.value = false;
-        return;
-      }
-
-      rows.forEach((item: any) => {
-        transactionData.value.push({
-          id: item.id,
-          transaction_no: item.transaction_no,
-          customer_name: item.customer_name,
-          playDuration: item.units[0].play_time,
-          total: item.total,
-          created_at: item.created_at,
-          unit_ps: item.units[0].title,
-          payment_method: item.payment_method,
-          status: item.status,
-          rent_price_per_hour: item.units[0].rent_price ?? 0,
-          start_time: item.units[0].start_time ?? item.created_at,
-          end_time: item.units[0].end_time ?? item.created_at,
-          fnb_items: item.fnbs.map((fnb: any) => ({
-            id: fnb.id,
-            title: fnb.title,
-            price: fnb.price,
-            qty: fnb.quantity,
-            subTotal: fnb.sub_total,
-          })),
-        });
-      });
-
-      page.value += 1;
-      isFetching.value = false;
-    },
-    () => {
-      isFetching.value = false;
-      toast.error("Data gagal dimuat. Harap coba lagi");
-    },
-  );
-};
-
-// Reset daftar & riwayat halaman lalu muat ulang saat filter berubah
-const resetAndFetch = () => {
-  transactionData.value = [];
-  page.value = 1;
-  isEmpty.value = false;
-  isFetching.value = false;
-  fetchTransactionData();
-};
-
-watch(loadingRef, (newEl: HTMLElement | null, oldEl: HTMLElement | null) => {
-  if (oldEl) {
-    observer.unobserve(oldEl);
-  }
-
-  if (newEl) {
-    observer.observe(newEl);
-  }
-});
-
-const selectPreset = (
-  type: "today" | "7days" | "this_month" | "last_month",
-) => {
-  filterType.value = type;
-  if (type === "today") {
-    startDate.value = dayjs().format("YYYY-MM-DD");
-    endDate.value = dayjs().format("YYYY-MM-DD");
-  } else if (type === "7days") {
-    startDate.value = dayjs().subtract(6, "day").format("YYYY-MM-DD");
-    endDate.value = dayjs().format("YYYY-MM-DD");
-  } else if (type === "this_month") {
-    startDate.value = dayjs().startOf("month").format("YYYY-MM-DD");
-    endDate.value = dayjs().endOf("month").format("YYYY-MM-DD");
-  } else if (type === "last_month") {
-    const lastMonth = dayjs().subtract(1, "month");
-    startDate.value = lastMonth.startOf("month").format("YYYY-MM-DD");
-    endDate.value = lastMonth.endOf("month").format("YYYY-MM-DD");
-  }
-  isFilterOpen.value = false;
-  resetAndFetch();
-};
-
-const applyCustomDate = () => {
-  filterType.value = "custom";
-  isFilterOpen.value = false;
-  resetAndFetch();
-};
-
-const closeFilterOnOutside = (e: MouseEvent) => {
-  const target = e.target as HTMLElement;
-  if (!target.closest(".filter-dropdown-container")) {
-    isFilterOpen.value = false;
-  }
-};
-
-const currencyFormat = (value: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-    .format(value)
-    .replace(/\s+/g, "");
-
-const formatDateTime = (value: string) =>
-  dayjs(value).format("DD-MM-YYYY HH:mm");
-const formatTime = (value: string) => dayjs(value).format("HH:mm");
-
-// ================= Sidebar Detail Transaksi =================
-const isSidebarOpen = ref(false);
-const selectedTransaction = ref<TransactionLogs | null>(null);
-
-const fnbTotal = computed(() =>
-  (selectedTransaction.value?.fnb_items ?? []).reduce(
-    (sum, item) => sum + item.price * item.qty,
-    0,
-  ),
-);
-
-const sewaTotal = computed(() => {
-  if (!selectedTransaction.value) return 0;
-  return selectedTransaction.value.total - fnbTotal.value;
-});
-
-function openDetail(transaction: TransactionLogs) {
-  selectedTransaction.value = transaction;
-  isSidebarOpen.value = true;
-}
-
-function closeDetail() {
-  isSidebarOpen.value = false;
-}
-
-// ================= Floating Menu per Row =================
-const activeMenuId = ref<number | null>(null);
-const menuPosition = ref({ top: 0, left: 0 });
-
-const activeTransaction = computed(
-  () => transactionData.value.find((t) => t.id === activeMenuId.value) ?? null,
-);
-
-function toggleMenu(event: MouseEvent, transaction: TransactionLogs) {
-  event.stopPropagation();
-  if (activeMenuId.value === transaction.id) {
-    activeMenuId.value = null;
-    return;
-  }
-  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-  const menuWidth = 190;
-  menuPosition.value = {
-    top: rect.bottom + 6,
-    left: Math.max(8, rect.right - menuWidth),
-  };
-  activeMenuId.value = transaction.id;
-}
-
-function closeMenu() {
-  activeMenuId.value = null;
-}
-
-function handleClickOutside(event: MouseEvent) {
-  const target = event.target as HTMLElement;
-  if (!target.closest(".floating-menu") && !target.closest(".menu-trigger")) {
-    closeMenu();
-  }
-}
-
-onUnmounted(() => {
-  window.removeEventListener("click", handleClickOutside);
-  window.removeEventListener("click", closeFilterOnOutside);
-  window.removeEventListener("scroll", closeMenu, true);
-  window.removeEventListener("resize", closeMenu);
-});
-
-function lihatDetail(transaction: TransactionLogs) {
-  closeMenu();
-  openDetail(transaction);
-}
-
-function cetakStruk(transaction: TransactionLogs) {
-  closeMenu();
-  // TODO: sambungin ke fitur cetak struk / generate PDF
-  toast.success(`Menyiapkan struk ${transaction.transaction_no}`);
-}
-
-async function hapusTransaksi(transaction: TransactionLogs) {
-  closeMenu();
-  const ok = await confirm({
-    title: "Hapus transaksi ini?",
-    message: `Transaksi ${transaction.transaction_no} akan dihapus permanen dan gak bisa dikembaliin.`,
-    variant: "danger",
-    confirmText: "Ya, Hapus",
-    cancelText: "Batal",
-  });
-  if (!ok) return;
-
-  try {
-    // TODO: sesuaikan endpoint hapus transaksi
-    transactionData.value = transactionData.value.filter(
-      (t) => t.id !== transaction.id,
-    );
-    if (selectedTransaction.value?.id === transaction.id) closeDetail();
-    toast.success("Transaksi berhasil dihapus");
-  } catch (err) {
-    toast.error("Gagal menghapus transaksi");
-  }
-}
+const {
+  isFilterOpen,
+  selectedPeriodLabel,
+  formattedDateRange,
+  selectPreset,
+  filterType,
+  startDate,
+  endDate,
+  applyCustomDate,
+  transactionData,
+  selectedTransaction,
+  formatDateTime,
+  toggleMenu,
+  isEmpty,
+  activeMenuId,
+  menuPosition,
+  lihatDetail,
+  cetakStruk,
+  activeTransaction,
+  isSidebarOpen,
+  closeDetail,
+  openDetail,
+  hapusTransaksi,
+  formatTime,
+  fnbTotal,
+  sewaTotal,
+  summary,
+  selectStatus,
+  statusFilter,
+  loadingRef,
+  statusLabel,
+} = useTransactionPage();
 </script>
 
 <template>
@@ -384,10 +78,6 @@ async function hapusTransaksi(transaction: TransactionLogs) {
       </div>
 
       <!-- ============ Score Cards Ringkasan Transaksi (klik untuk filter status) ============ -->
-      <p class="mb-3 flex items-center gap-1.5 text-xs text-slate-400">
-        <Info :size="13" /> Klik kartu untuk memfilter transaksi berdasarkan
-        status
-      </p>
       <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <button
           type="button"
@@ -420,7 +110,7 @@ async function hapusTransaksi(transaction: TransactionLogs) {
             </span>
           </div>
           <p class="mt-2 font-display text-2xl font-bold text-slate-900">
-            {{ currencyFormat(summary.all.amount) }}
+            {{ formatRupiah(summary.all.amount) }}
           </p>
           <p class="mt-1 text-xs text-slate-400">
             {{ summary.all.count }} transaksi
@@ -458,7 +148,7 @@ async function hapusTransaksi(transaction: TransactionLogs) {
             </span>
           </div>
           <p class="mt-2 font-display text-2xl font-bold text-slate-900">
-            {{ currencyFormat(summary.complete.amount) }}
+            {{ formatRupiah(summary.complete.amount) }}
           </p>
           <p class="mt-1 text-xs text-slate-400">
             {{ summary.complete.count }} transaksi
@@ -496,7 +186,7 @@ async function hapusTransaksi(transaction: TransactionLogs) {
             </span>
           </div>
           <p class="mt-2 font-display text-2xl font-bold text-slate-900">
-            {{ currencyFormat(summary.cancel.amount) }}
+            {{ formatRupiah(summary.cancel.amount) }}
           </p>
           <p class="mt-1 text-xs text-slate-400">
             {{ summary.cancel.count }} transaksi
@@ -534,7 +224,7 @@ async function hapusTransaksi(transaction: TransactionLogs) {
             </span>
           </div>
           <p class="mt-2 font-display text-2xl font-bold text-slate-900">
-            {{ currencyFormat(summary.pending.amount) }}
+            {{ formatRupiah(summary.pending.amount) }}
           </p>
           <p class="mt-1 text-xs text-slate-400">
             {{ summary.pending.count }} transaksi
@@ -558,22 +248,6 @@ async function hapusTransaksi(transaction: TransactionLogs) {
             </p>
           </div>
           <div class="flex items-center gap-3">
-            <button
-              v-if="statusFilter !== 'all'"
-              type="button"
-              @click="selectStatus('all')"
-              title="Hapus filter status"
-              class="flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-100 cursor-pointer"
-            >
-              {{ statusLabel }}
-              <X :size="12" />
-            </button>
-            <div
-              class="rounded-full bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500"
-            >
-              {{ transactionData.length }} transaksi
-            </div>
-
             <!-- ================= ELEGANT DROPDOWN FILTER ================= -->
             <div class="relative filter-dropdown-container">
               <button
@@ -750,7 +424,7 @@ async function hapusTransaksi(transaction: TransactionLogs) {
                 <td
                   class="whitespace-nowrap px-5 py-4 text-slate-900 font-semibold"
                 >
-                  {{ currencyFormat(transaction.total) }}
+                  {{ formatRupiah(transaction.total) }}
                 </td>
 
                 <td class="whitespace-nowrap px-5 py-4">
@@ -958,7 +632,7 @@ async function hapusTransaksi(transaction: TransactionLogs) {
               <div class="mt-4 border-t border-white/20 pt-4">
                 <p class="text-xs text-indigo-100">Total Pembayaran</p>
                 <p class="mt-0.5 text-2xl font-bold">
-                  {{ currencyFormat(selectedTransaction.total) }}
+                  {{ formatRupiah(selectedTransaction.total) }}
                 </p>
               </div>
             </div>
@@ -1048,11 +722,11 @@ async function hapusTransaksi(transaction: TransactionLogs) {
                       {{ fnb.title }}
                     </p>
                     <p class="text-xs text-slate-400">
-                      {{ currencyFormat(fnb.price) }} x {{ fnb.qty }}
+                      {{ formatRupiah(fnb.price) }} x {{ fnb.qty }}
                     </p>
                   </div>
                   <p class="ml-3 shrink-0 text-sm font-semibold text-slate-900">
-                    {{ currencyFormat(fnb.price * fnb.qty) }}
+                    {{ formatRupiah(fnb.price * fnb.qty) }}
                   </p>
                 </div>
               </div>
@@ -1063,16 +737,16 @@ async function hapusTransaksi(transaction: TransactionLogs) {
               <div class="flex items-center justify-between text-sm">
                 <span class="text-slate-500">
                   Sewa PS ({{ selectedTransaction.playDuration }} jam x
-                  {{ currencyFormat(selectedTransaction.rent_price_per_hour) }})
+                  {{ formatRupiah(selectedTransaction.rent_price_per_hour) }})
                 </span>
                 <span class="font-medium text-slate-700">{{
-                  currencyFormat(sewaTotal)
+                  formatRupiah(sewaTotal)
                 }}</span>
               </div>
               <div class="flex items-center justify-between text-sm">
                 <span class="text-slate-500">Makanan & Minuman</span>
                 <span class="font-medium text-slate-700">{{
-                  currencyFormat(fnbTotal)
+                  formatRupiah(fnbTotal)
                 }}</span>
               </div>
               <div
@@ -1080,7 +754,7 @@ async function hapusTransaksi(transaction: TransactionLogs) {
               >
                 <span class="text-sm font-semibold text-slate-900">TOTAL</span>
                 <span class="text-lg font-bold text-indigo-600">{{
-                  currencyFormat(selectedTransaction.total)
+                  formatRupiah(selectedTransaction.total)
                 }}</span>
               </div>
             </div>
